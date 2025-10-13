@@ -1,17 +1,25 @@
-#ifndef PROCESS
-#define PROCESS
+#ifndef PROCESS_H
+#define PROCESS_H
 
 
-typedef struct{
-  char * process_name ;
-  int date;
-  int duration;
-  int priority;
+typedef struct process{
+  char * process_name ; 
+  int date ; 
+  int duration ;
+  int priority ;
+  struct process* next ;
  }process;
 
-void fifo_sched(process* p);
+typedef struct FifoQueue {
+  process* header;
+  process* tail;
+}fifo_queue;
 
-void round_robin(process* p, itn quantum);
+
+
+void fifo_sched(process* p); 
+
+void round_robin(process* p, int quantum);
 
 void shortest_job_first(process* p);
 
