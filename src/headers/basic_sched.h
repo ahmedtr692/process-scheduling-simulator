@@ -1,6 +1,13 @@
 #ifndef PROCESS_H
 #define PROCESS_H
 
+enum process_state{
+  new_p,
+  waiting_p,
+  running_p,
+  terminated_p,
+  ready_p
+};
 
 typedef struct process{
   char * process_name ; 
@@ -8,21 +15,27 @@ typedef struct process{
   int duration ;
   int priority ;
   struct process* next ;
- }process;
 
-typedef struct FifoQueue {
+  enum process_state state;
+  int rest ;
+  int begining_date ;
+  int ending_date;
+  
+}process;
+
+typedef struct ProcessQueue {
   process* header;
-  process* tail;
-}fifo_queue;
+  process* next; 
+}ProcessQueue;
 
 
 
-void fifo_sched(process* p); 
+ProcessQueue fifo_sched(process* p); 
 
 void round_robin(process* p, int quantum);
 
 void shortest_job_first(process* p);
 
-void priority(process* p, int preemptive);
+void priority_sched(process* p, int preemptive);
 
 #endif // !DEBUGdef 
