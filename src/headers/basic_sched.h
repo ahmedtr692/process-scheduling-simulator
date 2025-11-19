@@ -1,5 +1,5 @@
-#ifndef PROCESS_H
-#define PROCESS_H
+#ifndef BASIC_SCHED_H
+#define BASIC_SCHED_H
 
 // this defines the states that the process can be in
 enum process_state {
@@ -57,12 +57,10 @@ typedef struct process_queue {
 } process_queue;
 
 // Function declarations
-process_queue fifo_sched(process_queue p);
-
+void fifo_sched(process_queue* p);
 void round_robin(process_queue* p, int quantum);
-
 void shortest_job_first(process_queue* p);
-
 void priority_sched(process_queue* p, int preemptive);
 
-#endif // PROCESS_H
+#endif // BASIC_SCHED_H
+
