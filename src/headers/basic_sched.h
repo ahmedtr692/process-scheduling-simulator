@@ -1,5 +1,7 @@
-#ifndef PROCESS_H
-#define PROCESS_H
+#ifndef BASIC_SCHED_H
+#define BASIC_SCHED_H
+#include <stdlib.h>
+#include <stdio.h>
 
 // this defines the states that the process can be in
 enum process_state {
@@ -56,13 +58,19 @@ typedef struct process_queue {
   int size;
 } process_queue;
 
+typedef struct process_descriptor_t {
+  int date ;
+  process_state state;
+  process_operation_t operation;
+}process_descriptor_t;
+
 // Function declarations
-process_queue fifo_sched(process_queue p);
+void fifo_sched(process_queue* p, process_descriptor_t* descriptor[]);
 
-void round_robin(process_queue* p, int quantum);
+void round_robin(process_queue* p, int quantum, process_descriptor_t* descriptor[]);
 
-void shortest_job_first(process_queue* p);
+void shortest_job_first(process_queue* p, process_descriptor_t* descriptor[]);
 
-void priority_sched(process_queue* p, int preemptive);
+void priority_sched(process_queue* p, int preemptive, process_descriptor_t* descriptor[]);
 
-#endif // PROCESS_H
+#endif // BASIC_SCHED_H
