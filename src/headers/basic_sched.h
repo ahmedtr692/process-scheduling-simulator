@@ -3,7 +3,6 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-// this defines the states that the process can be in
 enum process_state {
   new_p,
   waiting_p,
@@ -14,28 +13,22 @@ enum process_state {
   blocked_p
 };
 
-// this enum defines the operations that can be done by the process
 typedef enum {
-  calc_p,     // logical and arithmetic operations
-  IO_p,       // memory, read/write and input/output operations
-  none        // the process does nothing
+  calc_p,
+  IO_p,
+  none
 } process_operation_t;
 
-// this new type is defined to describe each sequence of the process
 typedef struct operation_t {
   process_operation_t operation_p;
   int duration_op;
-  // int critical; // this will be uncommented in case we implement semaphore or mutex
 } operation_t;
 
-// descriptor of the process like 2 units CPU, 3 units I/O and 8 units CPU
-// which is an array of operations
 typedef struct descriptor_op {
-  operation_t *operations;  // dynamically allocated array
+  operation_t *operations;
   int count;
 } descriptor_op;
 
-// process structure
 typedef struct process_t {
   char *process_name;
   int begining_date;
@@ -45,13 +38,11 @@ typedef struct process_t {
   int priority_p;
 } process_t;
 
-// linked list node structure
 typedef struct node_t {
   process_t proc;
   struct node_t *next;
 } node_t;
 
-// queue structure for process scheduling
 typedef struct process_queue {
   node_t *head;
   node_t *tail;
@@ -64,8 +55,7 @@ typedef struct process_descriptor_t {
   process_operation_t operation;
 }process_descriptor_t;
 
-// Function declarations
-void fifo_sched(process_queue* p, process_descriptor_t* descriptor[]);
+void fifo_sched(process_queue* p, process_descriptor_t* descriptor[], int mode);
 
 void round_robin(process_queue* p, int quantum, process_descriptor_t* descriptor[]);
 
@@ -73,4 +63,4 @@ void shortest_job_first(process_queue* p, process_descriptor_t* descriptor[]);
 
 void priority_sched(process_queue* p, int preemptive, process_descriptor_t* descriptor[]);
 
-#endif // BASIC_SCHED_H
+#endif
