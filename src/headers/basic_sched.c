@@ -3,6 +3,11 @@
 #include <stdbool.h>
 #include <ctype.h>
 
+/* Named constants for readability and maintainability */
+#define MAX_GANTT_WIDTH 50
+#define NUM_QUANTUM_LEVELS 5
+static const int QUANTUM_PER_LEVEL[NUM_QUANTUM_LEVELS] = {2, 4, 8, 16, 32};
+
 /* ============== Queue Operations ============== */
 
 process_queue* create_queue(void) {
@@ -311,25 +316,6 @@ static void rotate_queue(process_queue *p) {
         p->tail->next = first;
         p->tail = first;
     }
-}
-
-__attribute__((unused))
-static node_t* find_earliest_arrival(process_queue *q, int current_time) {
-    if (q == NULL || q->head == NULL) return NULL;
-    
-    node_t *earliest = NULL;
-    node_t *current = q->head;
-    
-    while (current != NULL) {
-        if (current->proc.arrival_time_p <= current_time && current->proc.remaining_time > 0) {
-            if (earliest == NULL || 
-                current->proc.arrival_time_p < earliest->proc.arrival_time_p) {
-                earliest = current;
-            }
-        }
-        current = current->next;
-    }
-    return earliest;
 }
 
 static node_t* find_highest_priority(process_queue *q, int current_time) {
@@ -714,7 +700,6 @@ simulation_result_t* run_multilevel_queue(process_queue *q, int num_levels, int 
     }
     
     int current_time = 0;
-    int quantum_per_level[] = {2, 4, 8, 16, 32};  /* Increasing quantum per level */
     
     while (!all_processes_done(work_q)) {
         /* Distribute processes to level queues based on priority */
@@ -752,7 +737,7 @@ simulation_result_t* run_multilevel_queue(process_queue *q, int num_levels, int 
                     proc_copy.burst_time = current->proc.burst_time;
                     proc_copy.remaining_time = current->proc.remaining_time;
                     proc_copy.priority_p = current->proc.priority_p;
-                    proc_copy.quantum_p = quantum_per_level[level < 5 ? level : 4];
+                    proc_copy.quantum_p = QUANTUM_PER_LEVEL[level < NUM_QUANTUM_LEVELS ? level : NUM_QUANTUM_LEVELS - 1];
                     proc_copy.descriptor_p.operations = NULL;
                     proc_copy.descriptor_p.count = 0;
                     enqueue(level_queues[level], proc_copy);
@@ -810,7 +795,7 @@ simulation_result_t* run_multilevel_queue(process_queue *q, int num_levels, int 
         }
         
         /* Execute for quantum or remaining time */
-        int quantum = quantum_per_level[active_level < 5 ? active_level : 4];
+        int quantum = QUANTUM_PER_LEVEL[active_level < NUM_QUANTUM_LEVELS ? active_level : NUM_QUANTUM_LEVELS - 1];
         int exec_time = (work_proc->proc.remaining_time < quantum) ?
                         work_proc->proc.remaining_time : quantum;
         
@@ -888,7 +873,7 @@ void print_gantt_chart(simulation_result_t *result) {
         }
     }
     
-    for (int t = 0; t <= last_time && t <= 50; t += 5) {
+    for (int t = 0; t <= last_time && t <= MAX_GANTT_WIDTH; t += 5) {
         printf("%-5d", t);
     }
     printf("\n");
@@ -920,13 +905,13 @@ void print_gantt_chart(simulation_result_t *result) {
                     result->entries[j]->state == running_p) {
                     
                     /* Print gaps */
-                    while (col < result->entries[j]->date && col < 50) {
+                    while (col < result->entries[j]->date && col < MAX_GANTT_WIDTH) {
                         printf(" ");
                         col++;
                     }
                     
                     /* Print execution */
-                    for (int k = 0; k < result->entries[j]->duration && col < 50; k++) {
+                    for (int k = 0; k < result->entries[j]->duration && col < MAX_GANTT_WIDTH; k++) {
                         printf("#");
                         col++;
                     }
