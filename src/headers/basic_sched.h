@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-enum process_state {
+typedef enum process_state {
   new_p,
   waiting_p,
   running_p,
@@ -11,7 +11,7 @@ enum process_state {
   ready_p,
   suspended_p,
   blocked_p
-};
+} process_state;
 
 typedef enum {
   calc_p,
@@ -57,9 +57,8 @@ typedef struct process_descriptor_t {
 
 void fifo_sched(process_queue* p, process_descriptor_t* descriptor[], int mode);
 
-void round_robin(process_queue* p, int quantum, process_descriptor_t* descriptor[]);
 
-void shortest_job_first(process_queue* p, process_descriptor_t* descriptor[]);
+
 
 void priority_sched(process_queue* p, int preemptive, process_descriptor_t* descriptor[]);
 
