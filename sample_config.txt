@@ -1,0 +1,35 @@
+# Process Scheduling Simulator - Sample Configuration File
+# =========================================================
+#
+# This file defines the processes for the scheduling simulation.
+#
+# Format: process_name arrival_time burst_time priority [quantum]
+#
+# Fields:
+#   process_name  - Unique identifier for the process
+#   arrival_time  - Time when the process arrives (integer >= 0)
+#   burst_time    - Total CPU time required (integer > 0)
+#   priority      - Process priority (lower number = higher priority)
+#   quantum       - Optional: time quantum for round-robin (integer > 0)
+#
+# Notes:
+#   - Lines starting with # or ; are comments
+#   - Empty lines are ignored
+#   - Fields are separated by spaces or tabs
+
+# Example process set demonstrating various scheduling scenarios
+
+# High priority, arrives first
+P1 0 10 1
+
+# Medium priority, arrives shortly after
+P2 2 5 2
+
+# Low priority, arrives later
+P3 4 8 3
+
+# High priority, arrives late (will preempt in priority scheduling)
+P4 6 3 1
+
+# Very low priority, long burst
+P5 8 12 4
