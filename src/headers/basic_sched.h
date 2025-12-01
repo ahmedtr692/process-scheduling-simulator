@@ -4,12 +4,10 @@
 #include <stdio.h>
 
 typedef enum process_state {
-  new_p,
   waiting_p,
   running_p,
   terminated_p,
   ready_p,
-  suspended_p,
   blocked_p
 } process_state;
 
@@ -24,16 +22,10 @@ typedef struct operation_t {
   int duration_op;
 } operation_t;
 
-typedef struct descriptor_op {
-  operation_t *operations;
-  int count;
-} descriptor_op;
-
 typedef struct process_t {
   char *process_name;
   int begining_date;
-  int quantum_p;
-  descriptor_op descriptor_p;
+  operation_t descriptor_p[];
   int arrival_time_p;
   int priority_p;
 } process_t;
@@ -50,16 +42,20 @@ typedef struct process_queue {
 } process_queue;
 
 typedef struct process_descriptor_t {
+  char* process_name ;
   int date ;
   process_state state;
   process_operation_t operation;
 }process_descriptor_t;
 
-void fifo_sched(process_queue* p, process_descriptor_t* descriptor[], int mode);
+void add_tail(process_queue* p, process_t process);
 
+void append_descriptor(process_descriptor_t** descriptor ,process_descriptor_t unit_descriptor, int *size);
 
+void remove_head(process_queue *p);
 
+void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
+void round_robin_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
+void priority_sched(process_queue* p,  process_descriptor_t** descriptor, int *size);
 
-void priority_sched(process_queue* p, int preemptive, process_descriptor_t* descriptor[]);
-
-#endif
+#endif 
