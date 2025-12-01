@@ -25,8 +25,9 @@ typedef struct operation_t {
 typedef struct process_t {
   char *process_name;
   int begining_date;
-  operation_t descriptor_p[];
+  operation_t *descriptor_p;
   int arrival_time_p;
+  int operations_count;
   int priority_p;
 } process_t;
 
