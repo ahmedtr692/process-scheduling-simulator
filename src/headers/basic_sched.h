@@ -58,5 +58,7 @@ void remove_head(process_queue *p);
 void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
 void round_robin_sched(process_queue* p, process_descriptor_t** descriptor, int *size, int quantum);
 void priority_sched(process_queue* p,  process_descriptor_t** descriptor, int *size);
+void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
+void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
 
 #endif 
