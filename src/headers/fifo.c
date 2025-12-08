@@ -1,83 +1,62 @@
- #include "basic_sched.h"
+#include "basic_sched.h"
+#include <stdlib.h>
 
-void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) {
-    if (p->size == 0) return;
+void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size)
+{
+    if (p == NULL || p->size == 0) return;
 
-
-    process_queue *fifo_queue = malloc(sizeof(process_queue));
-    fifo_queue->head = NULL;
-    fifo_queue->tail = NULL;
-    fifo_queue->size = 0;
-
-
-    node_t *current = p->head;
-    while (current != NULL) {
-        add_tail(fifo_queue, current->proc);
-        current = current->next;
+    process_queue working_queue = { .head = NULL, .tail = NULL, .size = 0 };
+    for (node_t *n = p->head; n != NULL; n = n->next) {
+        process_t copy = n->proc;
+        add_tail(&working_queue, copy);
     }
 
+    int current_time = 0;
 
-    if (fifo_queue->size > 1) {
-        int swapped;
-        node_t *cur;
-        node_t *last = NULL;
+    while (working_queue.size > 0) {
+        process_t *proc = &working_queue.head->proc;
 
-        do {
-            swapped = 0;
-            cur = fifo_queue->head;
-            while (cur->next != last) {
-                if (cur->proc.begining_date > cur->next->proc.begining_date) {
-                    process_t tmp = cur->proc;
-                    cur->proc = cur->next->proc;
-                    cur->next->proc = tmp;
-                    swapped = 1;
-                }
-                cur = cur->next;
-            }
-            last = cur;
-        } while (swapped);
-    }
-  int current_time = 0;
-    process_descriptor_t entry;
+        if (current_time < proc->arrival_time_p) current_time = proc->arrival_time_p;
+        if (current_time < proc->begining_date) current_time = proc->begining_date;
 
-    for (node_t *cur = fifo_queue->head; cur != NULL; cur = cur->next) {
-        if (current_time < cur->proc.arrival_time_p) current_time = cur->proc.arrival_time_p;
-        if (current_time < cur->proc.begining_date) current_time = cur->proc.begining_date;
+        for (int i = 0; i < proc->operations_count; ++i) {
+            operation_t op = proc->descriptor_p[i].operation_p;
+            int *remaining = &proc->descriptor_p[i].duration_op;
 
-        for (int j = 0; j < cur->proc.operations_count; j++) {
-            int ticks = cur->proc.descriptor_p[j].duration_op;
-            while (ticks-- > 0) {
-                entry.process_name = cur->proc.process_name;
-                entry.date = current_time;
-                entry.state = (cur->proc.descriptor_p[j].operation_p != none) ? running_p : ready_p;
-                entry.operation = cur->proc.descriptor_p[j].operation_p;
-                append_descriptor(descriptor, entry, size);
+            while (*remaining > 0) {
+                process_descriptor_t run_entry;
+                run_entry.process_name = proc->process_name;
+                run_entry.date = current_time;
+                run_entry.state = (op != none) ? running_p : ready_p;
+                run_entry.operation = op;
+                append_descriptor(descriptor, run_entry, size);
 
-                for (node_t *others = fifo_queue->head; others != NULL; others = others->next) {
-                    if (others == cur) continue;
-                    if (others->proc.arrival_time_p <= current_time &&
-                        others->proc.begining_date <= current_time) {
-                        process_descriptor_t idle_entry;
-                        idle_entry.process_name = others->proc.process_name;
-                        idle_entry.date = current_time;
-                        idle_entry.state = waiting_p;
-                        idle_entry.operation = none;
-                        append_descriptor(descriptor, idle_entry, size);
+                for (node_t *o = working_queue.head->next; o != NULL; o = o->next) {
+                    if (o->proc.arrival_time_p <= current_time &&
+                        o->proc.begining_date <= current_time) {
+                        process_descriptor_t wait_entry;
+                        wait_entry.process_name = o->proc.process_name;
+                        wait_entry.date = current_time;
+                        wait_entry.state = waiting_p;
+                        wait_entry.operation = none;
+                        append_descriptor(descriptor, wait_entry, size);
                     }
                 }
+
                 current_time++;
+                (*remaining)--;
             }
         }
+        process_descriptor_t term;
+        term.process_name = proc->process_name;
+        term.date = current_time;
+        term.state = terminated_p;
+        term.operation = none;
+        append_descriptor(descriptor, term, size);
 
-        entry.process_name = cur->proc.process_name;
-        entry.date = current_time;
-        entry.state = terminated_p;
-        entry.operation = none;
-        append_descriptor(descriptor, entry, size);
-        current_time++;
+        remove_head(&working_queue);
+        current_time++;  
     }
 
-
-  while (fifo_queue->size > 0) remove_head(fifo_queue);
-  free(fifo_queue);
+    
 }
