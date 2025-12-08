@@ -1,5 +1,7 @@
 #include "display.h"
+#include <ncurses.h>
 #include <string.h>
+#include <unistd.h>
 
 static const char* state_to_string(process_state state) {
     switch (state) {
@@ -21,31 +23,86 @@ static const char* operation_to_string(process_operation_t op) {
     }
 }
 
-void print_simulation_results(process_descriptor_t* descriptor, int size) {
-    printf("\n");
-    printf("========================================\n");
-    printf("   SIMULATION RESULTS\n");
-    printf("========================================\n\n");
+void init_ncurses_display() {
+    initscr();
+    cbreak();
+    noecho();
+    keypad(stdscr, TRUE);
+    curs_set(0);
     
-    printf("%-15s %-10s %-15s %-10s\n", "PROCESS", "TIME", "STATE", "OPERATION");
-    printf("%-15s %-10s %-15s %-10s\n", "-------", "----", "-----", "---------");
-    
-    for (int i = 0; i < size; i++) {
-        printf("%-15s %-10d %-15s %-10s\n",
-               descriptor[i].process_name,
-               descriptor[i].date,
-               state_to_string(descriptor[i].state),
-               operation_to_string(descriptor[i].operation));
+    if (has_colors()) {
+        start_color();
+        init_pair(1, COLOR_GREEN, COLOR_BLACK);   // Running
+        init_pair(2, COLOR_YELLOW, COLOR_BLACK);  // Waiting
+        init_pair(3, COLOR_RED, COLOR_BLACK);     // Terminated
+        init_pair(4, COLOR_CYAN, COLOR_BLACK);    // Headers
+        init_pair(5, COLOR_WHITE, COLOR_BLUE);    // Title
     }
-    printf("\n");
 }
 
-void print_statistics(process_descriptor_t* descriptor, int size) {
+void cleanup_ncurses_display() {
+    endwin();
+}
+
+void display_simulation_results(process_descriptor_t* descriptor, int size) {
+    clear();
+    
+    // Display title
+    attron(COLOR_PAIR(5) | A_BOLD);
+    mvprintw(0, 0, "                    SIMULATION RESULTS                    ");
+    attroff(COLOR_PAIR(5) | A_BOLD);
+    
+    // Display headers
+    attron(COLOR_PAIR(4) | A_BOLD);
+    mvprintw(2, 0, "%-15s %-10s %-15s %-10s", "PROCESS", "TIME", "STATE", "OPERATION");
+    mvprintw(3, 0, "%-15s %-10s %-15s %-10s", "-------", "----", "-----", "---------");
+    attroff(COLOR_PAIR(4) | A_BOLD);
+    
+    // Display results with scrolling
+    int max_y, max_x;
+    getmaxyx(stdscr, max_y, max_x);
+    (void)max_x; // Suppress unused warning
+    
+    int visible_lines = max_y - 6;
+    
+    for (int i = 0; i < size && i < visible_lines; i++) {
+        int color_pair = 0;
+        if (descriptor[i].state == running_p) color_pair = 1;
+        else if (descriptor[i].state == waiting_p) color_pair = 2;
+        else if (descriptor[i].state == terminated_p) color_pair = 3;
+        
+        if (color_pair > 0) attron(COLOR_PAIR(color_pair));
+        
+        mvprintw(4 + i, 0, "%-15s %-10d %-15s %-10s",
+                 descriptor[i].process_name,
+                 descriptor[i].date,
+                 state_to_string(descriptor[i].state),
+                 operation_to_string(descriptor[i].operation));
+        
+        if (color_pair > 0) attroff(COLOR_PAIR(color_pair));
+    }
+    
+    // Navigation info
+    if (size > visible_lines) {
+        mvprintw(max_y - 1, 0, "Showing %d/%d entries. Press any key to continue...", 
+                 visible_lines, size);
+    } else {
+        mvprintw(max_y - 1, 0, "Press any key to continue...");
+    }
+    
+    refresh();
+    getch();
+}
+
+void display_statistics(process_descriptor_t* descriptor, int size) {
     if (size == 0) return;
     
-    printf("========================================\n");
-    printf("   STATISTICS\n");
-    printf("========================================\n\n");
+    clear();
+    
+    // Display title
+    attron(COLOR_PAIR(5) | A_BOLD);
+    mvprintw(0, 0, "                       STATISTICS                         ");
+    attroff(COLOR_PAIR(5) | A_BOLD);
     
     // Calculate per-process statistics
     typedef struct {
@@ -89,19 +146,33 @@ void print_statistics(process_descriptor_t* descriptor, int size) {
         }
     }
     
-    printf("%-15s %-12s %-12s %-12s %-15s\n", 
-           "PROCESS", "START", "END", "TURNAROUND", "WAITING");
-    printf("%-15s %-12s %-12s %-12s %-15s\n",
-           "-------", "-----", "---", "----------", "-------");
+    // Display headers
+    attron(COLOR_PAIR(4) | A_BOLD);
+    mvprintw(2, 0, "%-15s %-12s %-12s %-12s %-15s", 
+             "PROCESS", "START", "END", "TURNAROUND", "WAITING");
+    mvprintw(3, 0, "%-15s %-12s %-12s %-12s %-15s",
+             "-------", "-----", "---", "----------", "-------");
+    attroff(COLOR_PAIR(4) | A_BOLD);
     
+    // Display statistics
     for (int i = 0; i < num_procs; i++) {
         int turnaround = stats[i].end_time - stats[i].start_time;
-        printf("%-15s %-12d %-12d %-12d %-15d\n",
-               stats[i].name,
-               stats[i].start_time,
-               stats[i].end_time,
-               turnaround,
-               stats[i].total_wait);
+        
+        attron(COLOR_PAIR(1));
+        mvprintw(4 + i, 0, "%-15s %-12d %-12d %-12d %-15d",
+                 stats[i].name,
+                 stats[i].start_time,
+                 stats[i].end_time,
+                 turnaround,
+                 stats[i].total_wait);
+        attroff(COLOR_PAIR(1));
     }
-    printf("\n");
+    
+    int max_y, max_x;
+    getmaxyx(stdscr, max_y, max_x);
+    (void)max_x; // Suppress unused warning
+    mvprintw(max_y - 1, 0, "Press any key to continue...");
+    
+    refresh();
+    getch();
 }
