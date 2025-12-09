@@ -49,43 +49,44 @@ void cleanup_ncurses_display() {
 void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     clear();
     
-    // Display title
+    // Display title with padding
     attron(COLOR_PAIR(6) | A_BOLD);
-    mvprintw(0, 0, "               GANTT CHART - PROCESS TIMELINE (Arrows to scroll)");
+    mvprintw(0, 0, "                                                                              ");
+    mvprintw(0, 10, "       GANTT CHART - PROCESS TIMELINE");
     attroff(COLOR_PAIR(6) | A_BOLD);
     
-    // Legend
-    attron(COLOR_PAIR(5));
-    mvprintw(1, 0, "Legend: ");
-    attroff(COLOR_PAIR(5));
+    // Legend with better formatting
+    attron(COLOR_PAIR(5) | A_BOLD);
+    mvprintw(2, 0, "Legend: ");
+    attroff(COLOR_PAIR(5) | A_BOLD);
     
-    attron(COLOR_PAIR(1));
+    attron(COLOR_PAIR(1) | A_BOLD);
     printw("C");
-    attroff(COLOR_PAIR(1));
-    printw("=CALC ");
+    attroff(COLOR_PAIR(1) | A_BOLD);
+    printw("=CALC   ");
     
-    attron(COLOR_PAIR(2));
+    attron(COLOR_PAIR(2) | A_BOLD);
     printw("I");
-    attroff(COLOR_PAIR(2));
-    printw("=I/O ");
+    attroff(COLOR_PAIR(2) | A_BOLD);
+    printw("=I/O   ");
     
-    attron(COLOR_PAIR(3));
+    attron(COLOR_PAIR(3) | A_BOLD);
     printw("W");
-    attroff(COLOR_PAIR(3));
-    printw("=Wait ");
+    attroff(COLOR_PAIR(3) | A_BOLD);
+    printw("=Wait   ");
     
-    attron(COLOR_PAIR(4));
+    attron(COLOR_PAIR(4) | A_BOLD);
     printw("B");
-    attroff(COLOR_PAIR(4));
-    printw("=Block ");
+    attroff(COLOR_PAIR(4) | A_BOLD);
+    printw("=Block   ");
     
-    attron(COLOR_PAIR(4));
+    attron(COLOR_PAIR(4) | A_BOLD);
     printw("T");
-    attroff(COLOR_PAIR(4));
+    attroff(COLOR_PAIR(4) | A_BOLD);
     printw("=Term");
     
     if (size == 0) {
-        mvprintw(3, 0, "No simulation data available");
+        mvprintw(5, 0, "No simulation data available");
         refresh();
         getch();
         return;
@@ -119,10 +120,10 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
     
-    int start_row = 4;
+    int start_row = 6;  // Increased from 4 for better spacing
     int row_spacing = 2;
-    int label_col = 0;
-    int chart_start_col = 15;
+    int label_col = 2;  // Add left margin
+    int chart_start_col = 18;  // Increased for longer process names
     int available_width = max_x - chart_start_col - 2;
     
     // Scrolling state
@@ -134,38 +135,49 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     int ch;
     do {
         // Clear display area
-        for (int r = start_row - 1; r < max_y - 1; r++) {
+        for (int r = start_row - 2; r < max_y - 1; r++) {
             move(r, 0);
             clrtoeol();
         }
         
-        // Display timeline header
+        // Display column headers with separation line
         attron(COLOR_PAIR(5) | A_BOLD);
-        mvprintw(start_row - 1, label_col, "Process");
+        mvprintw(start_row - 2, label_col, "Process");
+        mvprintw(start_row - 2, chart_start_col - 1, "|");
+        mvprintw(start_row - 2, chart_start_col, "Timeline");
         attroff(COLOR_PAIR(5) | A_BOLD);
+        
+        // Draw separator line
+        mvprintw(start_row - 1, label_col, "---------------");
+        mvprintw(start_row - 1, chart_start_col - 1, "+");
+        for (int i = 0; i < available_width && (chart_start_col + i) < max_x - 1; i++) {
+            mvprintw(start_row - 1, chart_start_col + i, "-");
+        }
         
         // Draw time scale on top
         attron(COLOR_PAIR(5));
         for (int t = scroll_offset; t <= max_time && (t - scroll_offset) < available_width; t++) {
             int col = chart_start_col + (t - scroll_offset);
             if (col + 2 < max_x) {
-                mvprintw(start_row - 1, col, "%d", t % 10);
+                mvprintw(start_row - 2, col, "%d", t % 10);
             }
         }
         attroff(COLOR_PAIR(5));
         
         // Draw Gantt chart for each process
         int displayed_procs = 0;
-        for (int p = proc_scroll; p < num_procs && displayed_procs < (max_y - 6) / row_spacing; p++, displayed_procs++) {
+        for (int p = proc_scroll; p < num_procs && displayed_procs < (max_y - 8) / row_spacing; p++, displayed_procs++) {
             int row = start_row + displayed_procs * row_spacing;
             
-            // Process name
+            // Process name with better formatting
             attron(COLOR_PAIR(7) | A_BOLD);
-            mvprintw(row, label_col, "%-12s", processes[p]);
+            mvprintw(row, label_col, "%-14s", processes[p]);
             attroff(COLOR_PAIR(7) | A_BOLD);
             
-            // Draw border
+            // Draw border separator
+            attron(COLOR_PAIR(5));
             mvprintw(row, chart_start_col - 1, "|");
+            attroff(COLOR_PAIR(5));
             
             // Track process states - draw letters for each time unit
             for (int t = scroll_offset; t <= max_time && (t - scroll_offset) < available_width; t++) {
@@ -212,10 +224,15 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
             }
         }
         
-        // Display scroll instructions
-        mvprintw(max_y - 1, 0, "Time:%d-%d | Proc:%d-%d | Use arrows to scroll, q to continue", 
-                 scroll_offset, scroll_offset + available_width - 1,
-                 proc_scroll + 1, proc_scroll + displayed_procs);
+        // Display scroll instructions with better formatting
+        attron(COLOR_PAIR(6));
+        mvprintw(max_y - 1, 0, "                                                                              ");
+        mvprintw(max_y - 1, 2, "Time: %d-%d | Processes: %d-%d | Arrow keys=scroll | q/Enter/Space=continue", 
+                 scroll_offset, 
+                 (scroll_offset + available_width - 1 < max_time) ? scroll_offset + available_width - 1 : max_time,
+                 proc_scroll + 1, 
+                 (proc_scroll + displayed_procs < num_procs) ? proc_scroll + displayed_procs : num_procs);
+        attroff(COLOR_PAIR(6));
         
         refresh();
         ch = getch();
