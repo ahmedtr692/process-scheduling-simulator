@@ -37,18 +37,9 @@ void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) 
             last = cur;
         } while (swapped);
     }
-    
   int current_time = 0;
     process_descriptor_t entry;
-    
-    // Track which processes are terminated
-    int terminated[100] = {0};
-    int proc_count = 0;
-    for (node_t *c = fifo_queue->head; c != NULL; c = c->next) {
-        proc_count++;
-    }
 
-    int completed = 0;
     for (node_t *cur = fifo_queue->head; cur != NULL; cur = cur->next) {
         if (current_time < cur->proc.arrival_time_p) current_time = cur->proc.arrival_time_p;
         if (current_time < cur->proc.begining_date) current_time = cur->proc.begining_date;
@@ -62,13 +53,8 @@ void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) 
                 entry.operation = cur->proc.descriptor_p[j].operation_p;
                 append_descriptor(descriptor, entry, size);
 
-                // Mark waiting for other processes that are ready but NOT terminated
-                int idx = 0;
                 for (node_t *others = fifo_queue->head; others != NULL; others = others->next) {
-                    if (others == cur || terminated[idx]) {
-                        idx++;
-                        continue;
-                    }
+                    if (others == cur) continue;
                     if (others->proc.arrival_time_p <= current_time &&
                         others->proc.begining_date <= current_time) {
                         process_descriptor_t idle_entry;
@@ -78,16 +64,11 @@ void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) 
                         idle_entry.operation = none;
                         append_descriptor(descriptor, idle_entry, size);
                     }
-                    idx++;
                 }
                 current_time++;
             }
         }
 
-        // Mark this process as terminated
-        terminated[completed] = 1;
-        completed++;
-        
         entry.process_name = cur->proc.process_name;
         entry.date = current_time;
         entry.state = terminated_p;

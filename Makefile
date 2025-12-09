@@ -3,7 +3,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -g -std=c99
-LDFLAGS = -lncurses 
+LDFLAGS = 
 
 # Directories
 SRC_DIR = src

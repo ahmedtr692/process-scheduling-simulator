@@ -1,67 +1,22 @@
 #include "headers/basic_sched.h"
 #include "headers/config_parser.h"
 #include "headers/display.h"
-#include <ncurses.h>
 #include <string.h>
 
-int show_menu() {
-    clear();
-    
-    // Title
-    attron(COLOR_PAIR(5) | A_BOLD);
-    mvprintw(0, 0, "           PROCESS SCHEDULING SIMULATOR           ");
-    attroff(COLOR_PAIR(5) | A_BOLD);
-    
-    attron(COLOR_PAIR(4));
-    mvprintw(2, 0, "Select a scheduling policy:");
-    attroff(COLOR_PAIR(4));
-    
-    mvprintw(4, 2, "1. FIFO (First In First Out)");
-    mvprintw(5, 2, "2. Round-Robin");
-    mvprintw(6, 2, "3. Priority Preemptive");
-    mvprintw(7, 2, "4. Multi-level Queue (Static Priority)");
-    mvprintw(8, 2, "5. Multi-level Queue with Aging");
-    mvprintw(9, 2, "0. Exit");
-    
-    mvprintw(11, 0, "Enter your choice: ");
-    refresh();
-    
-    echo();
-    curs_set(1);
-    int choice;
-    scanw("%d", &choice);
-    noecho();
-    curs_set(0);
-    
-    return choice;
-}
-
-int get_quantum() {
-    clear();
-    attron(COLOR_PAIR(4) | A_BOLD);
-    mvprintw(0, 0, "Enter time quantum for Round-Robin: ");
-    attroff(COLOR_PAIR(4) | A_BOLD);
-    refresh();
-    
-    echo();
-    curs_set(1);
-    int quantum;
-    scanw("%d", &quantum);
-    noecho();
-    curs_set(0);
-    
-    if (quantum <= 0) quantum = 2;
-    return quantum;
-}
-
-void show_policy_message(const char* policy_name) {
-    clear();
-    attron(COLOR_PAIR(1) | A_BOLD);
-    mvprintw(0, 0, "Running simulation: %s", policy_name);
-    attroff(COLOR_PAIR(1) | A_BOLD);
-    mvprintw(2, 0, "Please wait...");
-    refresh();
-    napms(500);
+void print_menu() {
+    printf("\n");
+    printf("=========================================\n");
+    printf("  PROCESS SCHEDULING SIMULATOR\n");
+    printf("=========================================\n");
+    printf("Select a scheduling policy:\n\n");
+    printf("  1. FIFO (First In First Out)\n");
+    printf("  2. Round-Robin\n");
+    printf("  3. Priority Preemptive\n");
+    printf("  4. Multi-level Queue (Static Priority)\n");
+    printf("  5. Multi-level Queue with Aging\n");
+    printf("  0. Exit\n");
+    printf("=========================================\n");
+    printf("Enter your choice: ");
 }
 
 int main(int argc, char** argv) {
@@ -83,20 +38,30 @@ int main(int argc, char** argv) {
     pqueue.tail = NULL;
     pqueue.size = 0;
 
+    printf("\n");
+    printf("=========================================\n");
+    printf("  PROCESS SCHEDULING SIMULATOR\n");
+    printf("=========================================\n\n");
+
     if (parse_config_file(argv[1], &pqueue) <= 0) {
         fprintf(stderr, "Error: Failed to load processes from configuration file\n");
         return 1;
     }
 
-    // Initialize ncurses
-    init_ncurses_display();
-
+    int choice;
     int running = 1;
 
     while (running) {
-        int choice = show_menu();
+        print_menu();
+        
+        if (scanf("%d", &choice) != 1) {
+            while (getchar() != '\n');
+            printf("Invalid input. Please enter a number.\n");
+            continue;
+        }
 
         if (choice == 0) {
+            printf("\nExiting simulator. Goodbye!\n\n");
             running = 0;
             continue;
         }
@@ -124,38 +89,38 @@ int main(int argc, char** argv) {
             add_tail(&sim_queue, proc_copy);
         }
 
+        printf("\nRunning simulation...\n");
+
         switch (choice) {
             case 1:
-                show_policy_message("FIFO (First In First Out)");
+                printf("Policy: FIFO (First In First Out)\n");
                 fifo_sched(&sim_queue, &descriptor, &desc_size);
                 break;
             case 2: {
-                int quantum = get_quantum();
-                char msg[100];
-                snprintf(msg, sizeof(msg), "Round-Robin (Quantum = %d)", quantum);
-                show_policy_message(msg);
+                int quantum;
+                printf("Enter time quantum for Round-Robin: ");
+                if (scanf("%d", &quantum) != 1 || quantum <= 0) {
+                    printf("Invalid quantum. Using default: 2\n");
+                    quantum = 2;
+                }
+                printf("Policy: Round-Robin (Quantum = %d)\n", quantum);
                 round_robin_sched(&sim_queue, &descriptor, &desc_size, quantum);
                 break;
             }
             case 3:
-                show_policy_message("Priority Preemptive");
+                printf("Policy: Priority Preemptive\n");
                 priority_sched(&sim_queue, &descriptor, &desc_size);
                 break;
             case 4:
-                show_policy_message("Multi-level Queue (Static Priority)");
+                printf("Policy: Multi-level Queue (Static Priority)\n");
                 multilevel_rr_sched(&sim_queue, &descriptor, &desc_size);
                 break;
             case 5:
-                show_policy_message("Multi-level Queue with Aging");
+                printf("Policy: Multi-level Queue with Aging\n");
                 multilevel_rr_aging_sched(&sim_queue, &descriptor, &desc_size);
                 break;
             default:
-                clear();
-                attron(COLOR_PAIR(3));
-                mvprintw(0, 0, "Invalid choice. Press any key to continue...");
-                attroff(COLOR_PAIR(3));
-                refresh();
-                getch();
+                printf("Invalid choice. Please try again.\n");
                 while (sim_queue.size > 0) {
                     free(sim_queue.head->proc.process_name);
                     free(sim_queue.head->proc.descriptor_p);
@@ -165,8 +130,8 @@ int main(int argc, char** argv) {
         }
 
         if (descriptor != NULL) {
-            display_simulation_results(descriptor, desc_size);
-            display_statistics(descriptor, desc_size);
+            print_simulation_results(descriptor, desc_size);
+            print_statistics(descriptor, desc_size);
             free(descriptor);
         }
 
@@ -176,6 +141,10 @@ int main(int argc, char** argv) {
             free(sim_queue.head->proc.descriptor_p);
             remove_head(&sim_queue);
         }
+
+        printf("\nPress Enter to continue...");
+        while (getchar() != '\n');
+        getchar();
     }
 
     // Clean up original queue
@@ -184,9 +153,6 @@ int main(int argc, char** argv) {
         free(pqueue.head->proc.descriptor_p);
         remove_head(&pqueue);
     }
-
-    // Cleanup ncurses
-    cleanup_ncurses_display();
 
     return 0;
 }
