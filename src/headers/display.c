@@ -75,7 +75,7 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     printw(" ");
     
     attron(COLOR_PAIR(4));
-    printw(" BLOCK ");
+    printw(" TERM ");
     attroff(COLOR_PAIR(4));
     
     if (size == 0) {
@@ -113,77 +113,89 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     int max_y, max_x;
     getmaxyx(stdscr, max_y, max_x);
     
-    int start_row = 3;
-    int chart_width = max_x - 20;
-    int time_scale = (max_time > chart_width) ? (max_time / chart_width + 1) : 1;
+    // Use wider blocks (3 chars per time unit) and more vertical spacing (2 rows per process)
+    int block_width = 3;
+    int start_row = 4;
+    int row_spacing = 2;
+    int label_col = 0;
+    int chart_start_col = 15;
+    int available_width = max_x - chart_start_col - 2;
+    
+    // Calculate if we need scaling
+    int required_width = (max_time + 1) * block_width;
+    int time_scale = (required_width > available_width) ? ((required_width / available_width) + 1) : 1;
     
     // Display timeline header
+    attron(COLOR_PAIR(5) | A_BOLD);
+    mvprintw(start_row - 1, label_col, "Process");
+    attroff(COLOR_PAIR(5) | A_BOLD);
+    
+    // Draw time scale on top
     attron(COLOR_PAIR(5));
-    mvprintw(start_row, 0, "Process");
-    mvprintw(start_row, 15, "Time -->");
+    for (int t = 0; t <= max_time; t++) {
+        int col = chart_start_col + (t / time_scale) * block_width;
+        if (col + 2 < max_x) {
+            mvprintw(start_row - 1, col, "%2d", t);
+        }
+    }
     attroff(COLOR_PAIR(5));
     
     // Draw Gantt chart for each process
-    for (int p = 0; p < num_procs && (start_row + p + 1) < max_y - 2; p++) {
-        int row = start_row + p + 1;
+    for (int p = 0; p < num_procs && (start_row + p * row_spacing) < max_y - 3; p++) {
+        int row = start_row + p * row_spacing;
         
         // Process name
-        attron(COLOR_PAIR(7));
-        mvprintw(row, 0, "%-12s", processes[p]);
-        attroff(COLOR_PAIR(7));
+        attron(COLOR_PAIR(7) | A_BOLD);
+        mvprintw(row, label_col, "%-12s", processes[p]);
+        attroff(COLOR_PAIR(7) | A_BOLD);
         
-        // Draw timeline
-        mvprintw(row, 15, "|");
+        // Draw border
+        mvprintw(row, chart_start_col - 1, "|");
         
-        // Track what we've drawn at each position
-        for (int i = 0; i < size; i++) {
-            if (strcmp(descriptor[i].process_name, processes[p]) != 0) continue;
-            
-            int time_pos = descriptor[i].date / time_scale;
-            if (time_pos >= chart_width - 1) continue;
-            
+        // Track process states - draw blocks for each time unit
+        for (int t = 0; t <= max_time; t++) {
+            // Find the descriptor entry for this process at this time
             int color_pair = 0;
+            int found = 0;
             
-            // Determine color based on state and operation
-            if (descriptor[i].state == running_p) {
-                if (descriptor[i].operation == calc_p) {
-                    color_pair = 1; // Green for CALC
-                } else if (descriptor[i].operation == IO_p) {
-                    color_pair = 2; // Blue for I/O
-                } else {
-                    color_pair = 1; // Default green for running
+            for (int i = 0; i < size; i++) {
+                if (strcmp(descriptor[i].process_name, processes[p]) == 0 && 
+                    descriptor[i].date == t) {
+                    found = 1;
+                    
+                    // Determine color based on state and operation
+                    if (descriptor[i].state == running_p) {
+                        if (descriptor[i].operation == calc_p) {
+                            color_pair = 1; // Green for CALC
+                        } else if (descriptor[i].operation == IO_p) {
+                            color_pair = 2; // Blue for I/O
+                        } else {
+                            color_pair = 1; // Default green for running
+                        }
+                    } else if (descriptor[i].state == waiting_p || descriptor[i].state == ready_p) {
+                        color_pair = 3; // Yellow for waiting
+                    } else if (descriptor[i].state == terminated_p) {
+                        color_pair = 4; // Red for terminated
+                    }
+                    break;
                 }
-            } else if (descriptor[i].state == waiting_p || descriptor[i].state == ready_p) {
-                color_pair = 3; // Yellow for waiting
-            } else if (descriptor[i].state == blocked_p || descriptor[i].state == terminated_p) {
-                color_pair = 4; // Red for blocked/terminated
             }
             
-            if (color_pair > 0) {
-                attron(COLOR_PAIR(color_pair) | A_BOLD);
-                mvprintw(row, 16 + time_pos, "█");
-                attroff(COLOR_PAIR(color_pair) | A_BOLD);
+            if (found && color_pair > 0) {
+                int col = chart_start_col + (t / time_scale) * block_width;
+                if (col + block_width <= max_x - 1) {
+                    attron(COLOR_PAIR(color_pair) | A_BOLD);
+                    for (int w = 0; w < block_width; w++) {
+                        mvprintw(row, col + w, "█");
+                    }
+                    attroff(COLOR_PAIR(color_pair) | A_BOLD);
+                }
             }
         }
     }
     
-    // Time markers
-    if (start_row + num_procs + 2 < max_y - 1) {
-        int marker_row = start_row + num_procs + 2;
-        attron(COLOR_PAIR(5));
-        mvprintw(marker_row, 15, "|");
-        
-        // Add time markers every 10 units (scaled)
-        for (int t = 0; t <= max_time; t += 10) {
-            int pos = t / time_scale;
-            if (pos < chart_width - 5) {
-                mvprintw(marker_row, 16 + pos, "%d", t);
-            }
-        }
-        attroff(COLOR_PAIR(5));
-    }
-    
-    mvprintw(max_y - 1, 0, "Scale: 1 char = %d time units. Press any key to continue...", time_scale);
+    mvprintw(max_y - 1, 0, "Block width: %d chars. Scale: 1 block = %d time unit(s). Press any key...", 
+             block_width, time_scale);
     
     refresh();
     getch();
