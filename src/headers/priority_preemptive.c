@@ -28,8 +28,9 @@ void priority_sched(process_queue *p, process_descriptor_t **descriptor, int *si
 
     int finished = 0;
     int current_time = 0;
+    int max_time = 10000; // Safety limit to prevent infinite loops
 
-    while (finished < n) {
+    while (finished < n && current_time < max_time) {
         // Find highest priority process that needs CPU
         int pick = -1;
         for (int k = 0; k < n; k++) {

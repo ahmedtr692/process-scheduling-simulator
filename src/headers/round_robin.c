@@ -32,8 +32,9 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
     int finished = 0;
     int current_time = 0;
     int cpu_proc = -1; // Which process currently has CPU
+    int max_time = 10000; // Safety limit to prevent infinite loops
 
-    while (finished < n) {
+    while (finished < n && current_time < max_time) {
         // Check if current CPU process needs to switch (quantum expired or operation done)
         if (cpu_proc != -1) {
             if (done[cpu_proc] || cpu_used[cpu_proc] >= quantum || 
@@ -62,7 +63,6 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
         }
 
         // Execute one time unit
-        int any_activity = 0;
 
         for (int k = 0; k < n; k++) {
             if (done[k]) continue;
@@ -82,8 +82,6 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
                 append_descriptor(descriptor, entry, size);
 
                 op_left[k]--;
-                cpu_used[k]++;
-                any_activity = 1;
 
                 // Check if operation completed
                 if (op_left[k] == 0) {
@@ -108,7 +106,6 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
                 entry.state = running_p;
                 entry.operation = IO_p;
                 append_descriptor(descriptor, entry, size);
-                any_activity = 1;
 
                 // Check if I/O completed
                 if (current_time + 1 >= io_until[k]) {
@@ -132,7 +129,6 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
                 entry.state = waiting_p;
                 entry.operation = none;
                 append_descriptor(descriptor, entry, size);
-                any_activity = 1;
             }
         }
 
@@ -149,12 +145,8 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
             }
         }
 
-        if (!any_activity && finished < n) {
-            // Advance time if nothing happening
-            current_time++;
-        } else {
-            current_time++;
-        }
+        // Always advance time
+        current_time++;
     }
 
     free(procs);

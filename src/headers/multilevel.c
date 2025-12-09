@@ -30,6 +30,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
 
     int finished = 0;
     int current_time = 0;
+    int max_time = 10000; // Safety limit to prevent infinite loops
 
     int max_priority = INT_MIN;
     for (int k = 0; k < n; k++)
@@ -39,7 +40,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
     for (int k = 0; k <= max_priority; k++)
         rr_index[k] = -1;
 
-    while (finished < n) {
+    while (finished < n && current_time < max_time) {
         int pick = -1;
         int best_priority = INT_MIN;
 

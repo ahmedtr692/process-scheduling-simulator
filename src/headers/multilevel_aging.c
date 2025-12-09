@@ -34,13 +34,14 @@ void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descript
 
     int finished = 0;
     int current_time = 0;
+    int max_time = 10000; // Safety limit to prevent infinite loops
 
     /* dynamic Round-Robin table (resizable) */
     int rr_cap = 32;
     int *rr_index = malloc(rr_cap * sizeof(int));
     for (int k = 0; k < rr_cap; k++) rr_index[k] = -1;
 
-    while (finished < n) {
+    while (finished < n && current_time < max_time) {
 
         /* --- AGING STEP --- */
         for (int k = 0; k < n; k++) {
