@@ -1,81 +1,160 @@
 #include "basic_sched.h"
+#include <stdlib.h>
 
-// FIFO: First In First Out - Simple sequential execution
-// Processes execute in arrival order, non-preemptive
+// Process state tracking for concurrent execution
+typedef struct {
+    int op_index;          // Current operation index
+    int op_remaining;      // Remaining time for current operation
+    int arrived;           // Has process arrived?
+    int terminated;        // Is process done?
+} proc_state_t;
+
+// FIFO: First In First Out with concurrent I/O-CALC support
+// - Processes execute in arrival order (FIFO queue discipline)
+// - When current process does CALC, next process can do I/O concurrently
+// - Only ONE I/O device: processes cannot do I/O simultaneously
 void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) {
     if (p->size == 0) return;
 
-    // Copy and sort processes by arrival time
-    process_queue *fifo_queue = malloc(sizeof(process_queue));
-    fifo_queue->head = NULL;
-    fifo_queue->tail = NULL;
-    fifo_queue->size = 0;
-
-    node_t *current = p->head;
-    while (current != NULL) {
-        add_tail(fifo_queue, current->proc);
-        current = current->next;
+    int n = p->size;
+    
+    // Copy processes to array and sort by arrival time
+    process_t *procs = malloc(n * sizeof(process_t));
+    proc_state_t *states = calloc(n, sizeof(proc_state_t));
+    
+    node_t *cur = p->head;
+    for (int i = 0; i < n; i++) {
+        procs[i] = cur->proc;
+        cur = cur->next;
     }
-
-    // Sort by arrival time (begining_date)
-    if (fifo_queue->size > 1) {
-        int swapped;
-        node_t *cur;
-        node_t *last = NULL;
-
-        do {
-            swapped = 0;
-            cur = fifo_queue->head;
-            while (cur->next != last) {
-                if (cur->proc.begining_date > cur->next->proc.begining_date) {
-                    process_t tmp = cur->proc;
-                    cur->proc = cur->next->proc;
-                    cur->next->proc = tmp;
-                    swapped = 1;
-                }
-                cur = cur->next;
+    
+    // Bubble sort by arrival time
+    for (int i = 0; i < n-1; i++) {
+        for (int j = 0; j < n-i-1; j++) {
+            int arr1 = (procs[j].begining_date > 0) ? procs[j].begining_date : procs[j].arrival_time_p;
+            int arr2 = (procs[j+1].begining_date > 0) ? procs[j+1].begining_date : procs[j+1].arrival_time_p;
+            if (arr1 > arr2) {
+                process_t tmp = procs[j];
+                procs[j] = procs[j+1];
+                procs[j+1] = tmp;
             }
-            last = cur;
-        } while (swapped);
+        }
     }
 
     int current_time = 0;
-
-    // Execute each process in order
-    for (node_t *cur = fifo_queue->head; cur != NULL; cur = cur->next) {
-        process_t *proc = &cur->proc;
-
-        // Wait for process to arrive
-        if (current_time < proc->arrival_time_p) current_time = proc->arrival_time_p;
-        if (current_time < proc->begining_date) current_time = proc->begining_date;
-
-        // Execute all operations of this process
-        for (int op_idx = 0; op_idx < proc->operations_count; op_idx++) {
-            process_operation_t op_type = proc->descriptor_p[op_idx].operation_p;
-            int duration = proc->descriptor_p[op_idx].duration_op;
-
-            // Execute this operation for its full duration
-            for (int t = 0; t < duration; t++) {
-                process_descriptor_t entry;
-                entry.process_name = proc->process_name;
-                entry.date = current_time;
-                entry.state = running_p;
-                entry.operation = op_type;
-                append_descriptor(descriptor, entry, size);
-
-                current_time++;
+    int finished = 0;
+    int cpu_process = -1;      // Which process has CPU (-1 = none)
+    int io_process = -1;       // Which process has I/O device (-1 = none)
+    
+    while (finished < n) {
+        // Check arrivals
+        for (int i = 0; i < n; i++) {
+            if (!states[i].arrived && !states[i].terminated) {
+                int arr = (procs[i].begining_date > 0) ? procs[i].begining_date : procs[i].arrival_time_p;
+                if (current_time >= arr) {
+                    states[i].arrived = 1;
+                }
             }
         }
-
-        // Mark process as terminated
-        process_descriptor_t term_entry;
-        term_entry.process_name = proc->process_name;
-        term_entry.date = current_time;
-        term_entry.state = terminated_p;
-        term_entry.operation = none;
-        append_descriptor(descriptor, term_entry, size);
+        
+        // Allocate CPU to first waiting process (FIFO order)
+        cpu_process = -1;
+        for (int i = 0; i < n; i++) {
+            if (states[i].arrived && !states[i].terminated) {
+                if (states[i].op_index < procs[i].operations_count) {
+                    process_operation_t op = procs[i].descriptor_p[states[i].op_index].operation_p;
+                    if (op == calc_p) {
+                        cpu_process = i;
+                        break;  // First eligible process gets CPU
+                    }
+                }
+            }
+        }
+        
+        // Allocate I/O device to first process needing it (only if no other I/O running)
+        io_process = -1;
+        for (int i = 0; i < n; i++) {
+            if (states[i].arrived && !states[i].terminated) {
+                if (states[i].op_index < procs[i].operations_count) {
+                    process_operation_t op = procs[i].descriptor_p[states[i].op_index].operation_p;
+                    if (op == IO_p) {
+                        io_process = i;
+                        break;  // First I/O request gets device
+                    }
+                }
+            }
+        }
+        
+        // Execute operations for this time tick
+        for (int i = 0; i < n; i++) {
+            if (!states[i].arrived || states[i].terminated) continue;
+            
+            if (states[i].op_index < procs[i].operations_count) {
+                process_operation_t op = procs[i].descriptor_p[states[i].op_index].operation_p;
+                
+                // Check if this process can execute
+                int can_execute = 0;
+                if (op == calc_p && i == cpu_process) can_execute = 1;
+                if (op == IO_p && i == io_process) can_execute = 1;
+                
+                if (can_execute) {
+                    // Initialize remaining time if starting new operation
+                    if (states[i].op_remaining == 0) {
+                        states[i].op_remaining = procs[i].descriptor_p[states[i].op_index].duration_op;
+                    }
+                    
+                    // Record running state
+                    process_descriptor_t entry;
+                    entry.process_name = procs[i].process_name;
+                    entry.date = current_time;
+                    entry.state = running_p;
+                    entry.operation = op;
+                    append_descriptor(descriptor, entry, size);
+                    
+                    states[i].op_remaining--;
+                    
+                    // Move to next operation if current one done
+                    if (states[i].op_remaining == 0) {
+                        states[i].op_index++;
+                        
+                        // Check if process is completely done
+                        if (states[i].op_index >= procs[i].operations_count) {
+                            states[i].terminated = 1;
+                        }
+                    }
+                } else {
+                    // Process is waiting
+                    process_descriptor_t entry;
+                    entry.process_name = procs[i].process_name;
+                    entry.date = current_time;
+                    entry.state = waiting_p;
+                    entry.operation = none;
+                    append_descriptor(descriptor, entry, size);
+                }
+            }
+        }
+        
+        // Mark terminated processes
+        for (int i = 0; i < n; i++) {
+            if (states[i].arrived && states[i].terminated && states[i].op_index == procs[i].operations_count) {
+                process_descriptor_t entry;
+                entry.process_name = procs[i].process_name;
+                entry.date = current_time;
+                entry.state = terminated_p;
+                entry.operation = none;
+                append_descriptor(descriptor, entry, size);
+                
+                states[i].op_index++;  // Prevent re-termination
+                finished++;
+            }
+        }
+        
+        current_time++;
+        
+        // Safety timeout
+        if (current_time > 10000) break;
     }
-
-    while (fifo_queue->size > 0) remove_head(fifo_queue);
-    free(fifo_queue);
+    
+    free(procs);
+    free(states);
 }
