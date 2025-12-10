@@ -94,8 +94,7 @@ void priority_sched(process_queue *p, process_descriptor_t **descriptor, int *si
                 term.state = terminated_p;
                 term.operation = none;
                 append_descriptor(descriptor, term, size);
-
-                current_time++;
+                // Don't increment time again - already incremented above
             } else {
                 op_left[pick] = procs[pick].descriptor_p[op_idx[pick]].duration_op;
             }
