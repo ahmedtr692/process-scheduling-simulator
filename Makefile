@@ -3,7 +3,7 @@
 
 CC = gcc
 CFLAGS = -Wall -Wextra -g -std=c99
-LDFLAGS = 
+LDFLAGS = -lncurses 
 
 # Directories
 SRC_DIR = src
@@ -23,7 +23,8 @@ SOURCES = $(SRC_DIR)/main.c \
           $(HEADERS_DIR)/multilevel.c \
           $(HEADERS_DIR)/multilevel_aging.c \
           $(HEADERS_DIR)/config_parser.c \
-          $(HEADERS_DIR)/display.c
+          $(HEADERS_DIR)/display.c \
+          $(HEADERS_DIR)/ncurses_display.c
 
 # Object files
 OBJECTS = $(BUILD_DIR)/main.o \
@@ -34,7 +35,8 @@ OBJECTS = $(BUILD_DIR)/main.o \
           $(BUILD_DIR)/multilevel.o \
           $(BUILD_DIR)/multilevel_aging.o \
           $(BUILD_DIR)/config_parser.o \
-          $(BUILD_DIR)/display.o
+          $(BUILD_DIR)/display.o \
+          $(BUILD_DIR)/ncurses_display.o
 
 # Installation directories
 PREFIX ?= /usr/local
@@ -56,7 +58,7 @@ $(TARGET): $(BUILD_DIR) $(BIN_DIR) $(OBJECTS)
 	@echo "Build complete: $(TARGET)"
 
 # Compile main.c
-$(BUILD_DIR)/main.o: $(SRC_DIR)/main.c $(HEADERS_DIR)/basic_sched.h $(HEADERS_DIR)/config_parser.h $(HEADERS_DIR)/display.h
+$(BUILD_DIR)/main.o: $(SRC_DIR)/main.c $(HEADERS_DIR)/basic_sched.h $(HEADERS_DIR)/config_parser.h $(HEADERS_DIR)/ncurses_display.h
 	$(CC) $(CFLAGS) -c $(SRC_DIR)/main.c -o $(BUILD_DIR)/main.o
 
 # Compile basic.c
@@ -90,6 +92,10 @@ $(BUILD_DIR)/config_parser.o: $(HEADERS_DIR)/config_parser.c $(HEADERS_DIR)/conf
 # Compile display.c
 $(BUILD_DIR)/display.o: $(HEADERS_DIR)/display.c $(HEADERS_DIR)/display.h $(HEADERS_DIR)/basic_sched.h
 	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/display.c -o $(BUILD_DIR)/display.o
+
+# Compile ncurses_display.c
+$(BUILD_DIR)/ncurses_display.o: $(HEADERS_DIR)/ncurses_display.c $(HEADERS_DIR)/ncurses_display.h $(HEADERS_DIR)/basic_sched.h
+	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/ncurses_display.c -o $(BUILD_DIR)/ncurses_display.o
 
 # Install target
 install: $(TARGET)
