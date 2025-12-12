@@ -3,15 +3,6 @@
 #include "headers/ncurses_display.h"
 #include <string.h>
 
-//<<<<<<< HEAD
-int main(int argv, char** argc){
-  File* file ;
-  char* path ;
-  path = argc[1];
-  file = fopen(path, 'r');
-  if(file == NULL) return -1 ;
-  return 0 ;
-//=======
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <config_file>\n", argv[0]);
@@ -126,5 +117,4 @@ int main(int argc, char** argv) {
     }
 
     return 0;
->>>>>>> origin/copilot/create-multitasking-scheduler
 }

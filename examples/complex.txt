@@ -1,0 +1,18 @@
+# Complex test case with varied priorities and arrival times
+# Tests all aspects of scheduling algorithms
+
+# Low priority, early arrival
+LowPrio1 0 1 calc:4 io:2 calc:3
+LowPrio2 1 2 calc:5
+
+# Medium priority
+MedPrio1 2 5 calc:6 io:3
+MedPrio2 3 5 io:2 calc:4
+
+# High priority, late arrival
+HighPrio1 4 10 calc:3
+HighPrio2 5 9 calc:7 io:2
+
+# Mixed workloads
+IOHeavy 6 4 io:5 calc:2 io:3
+CPUHeavy 7 6 calc:15
