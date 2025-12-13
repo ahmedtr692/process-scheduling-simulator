@@ -22,10 +22,21 @@ void display_simulation_results(process_descriptor_t* descriptor, int size);
 // Display statistics
 void display_statistics(process_descriptor_t* descriptor, int size);
 
-// Show menu and get user choice
+// Show menu and get user choice (now dynamically shows only available algorithms)
 int show_menu();
 
 // Get quantum for Round-Robin
 int get_quantum();
+
+// Check which scheduling algorithms are available at runtime
+typedef struct {
+    int fifo_available;
+    int round_robin_available;
+    int priority_available;
+    int multilevel_available;
+    int multilevel_aging_available;
+} available_algorithms_t;
+
+available_algorithms_t check_available_algorithms();
 
 #endif

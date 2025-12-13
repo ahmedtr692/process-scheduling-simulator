@@ -41,6 +41,42 @@ int main(int argc, char** argv) {
             continue;
         }
 
+        // Check if selected algorithm is available
+        available_algorithms_t avail = check_available_algorithms();
+        int algorithm_unavailable = 0;
+        
+        switch (choice) {
+            case 1:
+                if (!avail.fifo_available) algorithm_unavailable = 1;
+                break;
+            case 2:
+                if (!avail.round_robin_available) algorithm_unavailable = 1;
+                break;
+            case 3:
+                if (!avail.priority_available) algorithm_unavailable = 1;
+                break;
+            case 4:
+                if (!avail.multilevel_available) algorithm_unavailable = 1;
+                break;
+            case 5:
+                if (!avail.multilevel_aging_available) algorithm_unavailable = 1;
+                break;
+            default:
+                algorithm_unavailable = 1;
+                break;
+        }
+        
+        if (algorithm_unavailable) {
+            clear();
+            attron(COLOR_PAIR(3) | A_BOLD);  // Yellow color
+            mvprintw(10, 10, "Selected algorithm is not available.");
+            mvprintw(11, 10, "Press any key to continue...");
+            attroff(COLOR_PAIR(3) | A_BOLD);
+            refresh();
+            getch();
+            continue;
+        }
+
         process_descriptor_t* descriptor = NULL;
         int desc_size = 0;
 

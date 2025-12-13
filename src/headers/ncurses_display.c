@@ -32,10 +32,26 @@ void cleanup_ncurses_display() {
     endwin();
 }
 
+available_algorithms_t check_available_algorithms() {
+    available_algorithms_t avail;
+    
+    // Check if each scheduling function is available (non-NULL weak symbol)
+    avail.fifo_available = (fifo_sched != NULL);
+    avail.round_robin_available = (round_robin_sched != NULL);
+    avail.priority_available = (priority_sched != NULL);
+    avail.multilevel_available = (multilevel_rr_sched != NULL);
+    avail.multilevel_aging_available = (multilevel_rr_aging_sched != NULL);
+    
+    return avail;
+}
+
 int show_menu() {
     clear();
     int width;
     getmaxyx(stdscr, width, width);  // Just get width, ignore height
+    
+    // Check which algorithms are available
+    available_algorithms_t avail = check_available_algorithms();
     
     // Title
     attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
@@ -49,15 +65,53 @@ int show_menu() {
     mvprintw(7, (width - 50) / 2, "Select a scheduling policy:");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
-    mvprintw(9, (width - 50) / 2,  "  1. FIFO (First In First Out)");
-    mvprintw(10, (width - 50) / 2, "  2. Round-Robin");
-    mvprintw(11, (width - 50) / 2, "  3. Priority Preemptive");
-    mvprintw(12, (width - 50) / 2, "  4. Multi-level Queue (Static Priority)");
-    mvprintw(13, (width - 50) / 2, "  5. Multi-level Queue with Aging");
-    mvprintw(14, (width - 50) / 2, "  0. Exit");
+    int line = 9;
+    
+    // Only show available algorithms
+    if (avail.fifo_available) {
+        mvprintw(line++, (width - 50) / 2,  "  1. FIFO (First In First Out)");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2,  "  1. FIFO (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.round_robin_available) {
+        mvprintw(line++, (width - 50) / 2, "  2. Round-Robin");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  2. Round-Robin (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.priority_available) {
+        mvprintw(line++, (width - 50) / 2, "  3. Priority Preemptive");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  3. Priority Preemptive (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.multilevel_available) {
+        mvprintw(line++, (width - 50) / 2, "  4. Multi-level Queue (Static Priority)");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  4. Multi-level Queue (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.multilevel_aging_available) {
+        mvprintw(line++, (width - 50) / 2, "  5. Multi-level Queue with Aging");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  5. Multi-level Queue with Aging (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    mvprintw(line++, (width - 50) / 2, "  0. Exit");
     
     attron(COLOR_PAIR(COLOR_HEADER));
-    mvprintw(16, (width - 50) / 2, "Enter your choice: ");
+    mvprintw(line + 1, (width - 50) / 2, "Enter your choice: ");
     attroff(COLOR_PAIR(COLOR_HEADER));
     
     refresh();
