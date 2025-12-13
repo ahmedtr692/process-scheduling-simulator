@@ -100,6 +100,7 @@ void round_robin_sched(process_queue *p, process_descriptor_t **descriptor, int 
             if (ps->op_remaining == 0) {
                 ps->op_idx++;
                 ps->cpu_time_used = 0;
+                rr_index = (cpu_assigned + 1) % n; // Rotate to next process
                 if (ps->op_idx < ps->proc.operations_count) {
                     ps->op_remaining = ps->proc.descriptor_p[ps->op_idx].duration_op;
                 }
