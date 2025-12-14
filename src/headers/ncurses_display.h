@@ -13,6 +13,9 @@ void cleanup_ncurses_display();
 // Display Gantt chart with scrolling support
 void display_gantt_chart(process_descriptor_t* descriptor, int size);
 
+// Display real-time Gantt chart animation (tick by tick)
+void display_realtime_gantt(process_descriptor_t* descriptor, int size, int delay_ms);
+
 // Display ready queue during execution
 void display_ready_queue(process_queue* queue, int current_time);
 

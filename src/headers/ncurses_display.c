@@ -211,25 +211,25 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     mvprintw(0, (width - 40) / 2, "        GANTT CHART - SCHEDULING        ");
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
-    // Legend
+    // Legend with colored blocks
     attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     mvprintw(2, 2, "Legend: ");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    printw("C=CALC  ");
+    printw("█=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    printw("I=I/O  ");
+    printw("█=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    printw("W=Wait  ");
+    printw("░=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
     attron(COLOR_PAIR(COLOR_TERM));
-    printw("T=Term");
+    printw("▓=Term");
     attroff(COLOR_PAIR(COLOR_TERM));
     
     // Scrolling variables
@@ -282,10 +282,11 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 }
             }
             
-            // Display visible portion with colors
+            // Display visible portion with colored blocks
             for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
                 char ch = timeline[t];
                 int color = COLOR_WAIT;
+                const char* block = " ";
                 
                 // Find the descriptor for this time to get proper color
                 for (int i = 0; i < size; i++) {
@@ -296,8 +297,14 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 }
                 
                 if (ch != ' ') {
+                    // Map characters to Unicode block characters
+                    if (ch == 'C') block = "█";      // Full block for CALC
+                    else if (ch == 'I') block = "█"; // Full block for I/O
+                    else if (ch == 'W') block = "░"; // Light shade for Wait
+                    else if (ch == 'T') block = "▓"; // Medium shade for Terminated
+                    
                     attron(COLOR_PAIR(color));
-                    addch(ch);
+                    printw("%s", block);
                     attroff(COLOR_PAIR(color));
                 } else {
                     addch(' ');
@@ -337,6 +344,147 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 break;
         }
     }
+}
+
+void display_realtime_gantt(process_descriptor_t* descriptor, int size, int delay_ms) {
+    if (size == 0) return;
+    
+    clear();
+    
+    // Find unique processes and max time
+    char proc_names[100][64];
+    int proc_count = 0;
+    int max_time = 0;
+    
+    for (int i = 0; i < size; i++) {
+        int found = 0;
+        for (int j = 0; j < proc_count; j++) {
+            if (strcmp(proc_names[j], descriptor[i].process_name) == 0) {
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            strncpy(proc_names[proc_count], descriptor[i].process_name, 63);
+            proc_names[proc_count][63] = '\0';
+            proc_count++;
+        }
+        if (descriptor[i].date > max_time) max_time = descriptor[i].date;
+    }
+    
+    int height, width;
+    getmaxyx(stdscr, height, width);
+    
+    // Title
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(0, (width - 40) / 2, "   REAL-TIME GANTT CHART SIMULATION     ");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    // Legend
+    attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
+    mvprintw(2, 2, "Legend: ");
+    attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
+    
+    attron(COLOR_PAIR(COLOR_CALC));
+    printw("█=CALC  ");
+    attroff(COLOR_PAIR(COLOR_CALC));
+    
+    attron(COLOR_PAIR(COLOR_IO));
+    printw("█=I/O  ");
+    attroff(COLOR_PAIR(COLOR_IO));
+    
+    attron(COLOR_PAIR(COLOR_WAIT));
+    printw("░=Wait  ");
+    attroff(COLOR_PAIR(COLOR_WAIT));
+    
+    attron(COLOR_PAIR(COLOR_TERM));
+    printw("▓=Term");
+    attroff(COLOR_PAIR(COLOR_TERM));
+    
+    // Display process headers
+    mvprintw(4, 2, "Process        |");
+    mvprintw(5, 2, "---------------|");
+    
+    for (int p = 0; p < proc_count && p < height - 10; p++) {
+        mvprintw(6 + p * 2, 2, "%-14s |", proc_names[p]);
+    }
+    
+    refresh();
+    
+    // Animate tick by tick
+    timeout(delay_ms);
+    for (int t = 0; t <= max_time; t++) {
+        // Update time header
+        mvprintw(4, 17, "%d", t);
+        
+        // Update each process for this time tick
+        for (int p = 0; p < proc_count && p < height - 10; p++) {
+            // Find descriptor for this process at this time
+            char ch = ' ';
+            int color = COLOR_WAIT;
+            const char* block = " ";
+            
+            for (int i = 0; i < size; i++) {
+                if (strcmp(descriptor[i].process_name, proc_names[p]) == 0 && 
+                    descriptor[i].date == t) {
+                    color = get_color_for_operation(descriptor[i].operation, descriptor[i].state);
+                    
+                    if (descriptor[i].state == running_p) {
+                        ch = (descriptor[i].operation == calc_p) ? 'C' : 'I';
+                    } else if (descriptor[i].state == waiting_p) {
+                        ch = 'W';
+                    } else if (descriptor[i].state == terminated_p) {
+                        ch = 'T';
+                    }
+                    break;
+                }
+            }
+            
+            // Map to block characters
+            if (ch == 'C' || ch == 'I') block = "█";
+            else if (ch == 'W') block = "░";
+            else if (ch == 'T') block = "▓";
+            
+            // Display the block at the correct position
+            int display_col = 17 + t;
+            if (display_col < width - 1) {
+                move(6 + p * 2, display_col);
+                if (ch != ' ') {
+                    attron(COLOR_PAIR(color));
+                    printw("%s", block);
+                    attroff(COLOR_PAIR(color));
+                } else {
+                    addch(' ');
+                }
+            }
+        }
+        
+        // Status bar
+        attron(COLOR_PAIR(COLOR_HEADER));
+        mvprintw(height - 2, 0, " Time: %d/%d | Press 'q' to skip animation, any other key to continue... ", 
+                 t, max_time);
+        attroff(COLOR_PAIR(COLOR_HEADER));
+        
+        refresh();
+        
+        // Check for user input
+        int ch = getch();
+        if (ch == 'q' || ch == 'Q') {
+            // Skip remaining animation
+            timeout(-1);
+            break;
+        }
+    }
+    
+    timeout(-1);
+    
+    // Final message
+    attron(COLOR_PAIR(COLOR_HEADER));
+    mvprintw(height - 2, 0, " Animation complete. Press any key to continue... ");
+    clrtoeol();
+    attroff(COLOR_PAIR(COLOR_HEADER));
+    refresh();
+    getch();
 }
 
 void display_ready_queue(process_queue* queue __attribute__((unused)), int current_time __attribute__((unused))) {

@@ -128,7 +128,13 @@ int main(int argc, char** argv) {
         }
 
         if (descriptor != NULL) {
+            // Show real-time tick-by-tick animation (200ms per tick)
+            display_realtime_gantt(descriptor, desc_size, 200);
+            
+            // Show scrollable Gantt chart
             display_gantt_chart(descriptor, desc_size);
+            
+            // Show simulation results and statistics
             display_simulation_results(descriptor, desc_size);
             display_statistics(descriptor, desc_size);
             free(descriptor);
