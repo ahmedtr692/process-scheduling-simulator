@@ -217,12 +217,12 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    addch(ACS_BLOCK);
+    addch(ACS_CKBOARD);
     printw("=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    addch(ACS_BLOCK);
+    addch(ACS_CKBOARD);
     printw("=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
@@ -303,7 +303,7 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                     attron(COLOR_PAIR(color));
                     // Map characters to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
-                        addch(ACS_BLOCK);  // Solid block for CALC/I/O
+                        addch(ACS_CKBOARD);  // Solid block for CALC/I/O
                     } else if (ch == 'W' || ch == 'T') {
                         addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
@@ -388,12 +388,12 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    addch(ACS_BLOCK);
+    addch(ACS_CKBOARD);
     printw("=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    addch(ACS_BLOCK);
+    addch(ACS_CKBOARD);
     printw("=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
@@ -453,7 +453,7 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
                     attron(COLOR_PAIR(color));
                     // Map to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
-                        addch(ACS_BLOCK);  // Solid block for CALC/I/O
+                        addch(ACS_CKBOARD);  // Solid block for CALC/I/O
                     } else if (ch == 'W' || ch == 'T') {
                         addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
