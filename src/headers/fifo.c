@@ -1,5 +1,21 @@
  #include "basic_sched.h"
 
+<<<<<<< HEAD
+=======
+// Process state tracking for concurrent execution
+/*typedef struct {
+    int op_index;          // Current operation index
+    int op_remaining;      // Remaining time for current operation
+    int arrived;           // Has process arrived?
+    int terminated;        // Is process done?
+} proc_state_t;
+
+// FIFO: First In First Out with concurrent I/O-CALC support
+// - Processes execute in arrival order (FIFO queue discipline)
+// - When current process does CALC, next process can do I/O concurrently
+// - Only ONE I/O device: processes cannot do I/O simultaneously
+>>>>>>> aba06b296a5d4ec8b5ed9497236322f1eb8b512c
+ */
 void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) {
     if (p->size == 0) return;
 
@@ -38,6 +54,7 @@ void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) 
         } while (swapped);
     }
     
+//<<<<<<< HEAD
   int current_time = 0;
     process_descriptor_t entry;
     
@@ -99,4 +116,8 @@ void fifo_sched(process_queue *p, process_descriptor_t **descriptor, int* size) 
 
   while (fifo_queue->size > 0) remove_head(fifo_queue);
   free(fifo_queue);
+//=======
+ //   free(procs);
+  //  free(states);
+//>>>>>>> aba06b296a5d4ec8b5ed9497236322f1eb8b512c
 }
