@@ -45,28 +45,6 @@ void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descript
         int cpu_pick = -1;
         int io_pick = -1;
 
-        /* --- AGING STEP (only for processes waiting for CPU) --- */
-        for (int k = 0; k < n; k++) {
-            if (done[k]) continue;
-            if (procs[k].arrival_time_p > current_time) continue;
-            if (io_until[k] >= 0) continue; // Doing I/O, not waiting for CPU
-
-            wait_time[k]++;
-
-            if (wait_time[k] >= AGING_THRESHOLD) {
-                procs[k].priority_p++;   // age
-                wait_time[k] = 0;
-
-                /* expand rr_index if needed */
-                if (procs[k].priority_p >= rr_cap) {
-                    rr_cap *= 2;
-                    rr_index = realloc(rr_index, rr_cap * sizeof(int));
-                    for (int t = procs[k].priority_p; t < rr_cap; t++)
-                        rr_index[t] = -1;
-                }
-            }
-        }
-
         /* --- SELECT PROCESS WITH HIGHEST PRIORITY for CPU (CALC only) --- */
         int best_priority = INT_MIN;
         for (int k = 0; k < n; k++) {
@@ -173,6 +151,29 @@ void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descript
                 op_idx[cpu_pick]++;
                 if (op_idx[cpu_pick] < procs[cpu_pick].operations_count) {
                     op_left[cpu_pick] = procs[cpu_pick].descriptor_p[op_idx[cpu_pick]].duration_op;
+                }
+            }
+        }
+
+        /* --- AGING STEP for processes that are waiting (not running) --- */
+        for (int k = 0; k < n; k++) {
+            if (done[k]) continue;
+            if (procs[k].arrival_time_p > current_time) continue;
+            if (io_until[k] >= 0) continue; // Doing I/O, not waiting for CPU
+            if (k == cpu_pick) continue; // Currently running, not waiting
+
+            wait_time[k]++;
+
+            if (wait_time[k] >= AGING_THRESHOLD) {
+                procs[k].priority_p++;   // age
+                wait_time[k] = 0;
+
+                /* expand rr_index if needed */
+                if (procs[k].priority_p >= rr_cap) {
+                    rr_cap *= 2;
+                    rr_index = realloc(rr_index, rr_cap * sizeof(int));
+                    for (int t = procs[k].priority_p; t < rr_cap; t++)
+                        rr_index[t] = -1;
                 }
             }
         }

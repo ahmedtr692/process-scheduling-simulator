@@ -14,29 +14,34 @@ BIN_DIR = bin
 # Target executable
 TARGET = $(BIN_DIR)/scheduler
 
-# Source files
-SOURCES = $(SRC_DIR)/main.c \
-          $(HEADERS_DIR)/basic.c \
-          $(HEADERS_DIR)/fifo.c \
-          $(HEADERS_DIR)/round_robin.c \
-          $(HEADERS_DIR)/priority_preemptive.c \
-          $(HEADERS_DIR)/multilevel.c \
-          $(HEADERS_DIR)/multilevel_aging.c \
-          $(HEADERS_DIR)/config_parser.c \
-          $(HEADERS_DIR)/display.c \
-          $(HEADERS_DIR)/ncurses_display.c
+# Core source files (always required)
+CORE_SOURCES = $(SRC_DIR)/main.c \
+               $(HEADERS_DIR)/basic.c \
+               $(HEADERS_DIR)/config_parser.c \
+               $(HEADERS_DIR)/display.c \
+               $(HEADERS_DIR)/ncurses_display.c
 
-# Object files
-OBJECTS = $(BUILD_DIR)/main.o \
-          $(BUILD_DIR)/basic.o \
-          $(BUILD_DIR)/fifo.o \
-          $(BUILD_DIR)/round_robin.o \
-          $(BUILD_DIR)/priority_preemptive.o \
-          $(BUILD_DIR)/multilevel.o \
-          $(BUILD_DIR)/multilevel_aging.o \
-          $(BUILD_DIR)/config_parser.o \
-          $(BUILD_DIR)/display.o \
-          $(BUILD_DIR)/ncurses_display.o
+# Optional scheduling algorithm files (will be included if they exist)
+OPTIONAL_ALGORITHMS = fifo round_robin priority_preemptive multilevel multilevel_aging
+
+# Dynamically find which algorithm files exist
+AVAILABLE_ALGORITHMS = $(foreach alg,$(OPTIONAL_ALGORITHMS),$(if $(wildcard $(HEADERS_DIR)/$(alg).c),$(alg)))
+
+# Build complete source list
+SOURCES = $(CORE_SOURCES) $(foreach alg,$(AVAILABLE_ALGORITHMS),$(HEADERS_DIR)/$(alg).c)
+
+# Core object files (always built)
+CORE_OBJECTS = $(BUILD_DIR)/main.o \
+               $(BUILD_DIR)/basic.o \
+               $(BUILD_DIR)/config_parser.o \
+               $(BUILD_DIR)/display.o \
+               $(BUILD_DIR)/ncurses_display.o
+
+# Algorithm object files (only for available algorithms)
+ALGORITHM_OBJECTS = $(foreach alg,$(AVAILABLE_ALGORITHMS),$(BUILD_DIR)/$(alg).o)
+
+# Complete object file list
+OBJECTS = $(CORE_OBJECTS) $(ALGORITHM_OBJECTS)
 
 # Installation directories
 PREFIX ?= /usr/local
@@ -56,6 +61,7 @@ $(BIN_DIR):
 $(TARGET): $(BUILD_DIR) $(BIN_DIR) $(OBJECTS)
 	$(CC) $(OBJECTS) -o $(TARGET) $(LDFLAGS)
 	@echo "Build complete: $(TARGET)"
+	@echo "Available algorithms: $(AVAILABLE_ALGORITHMS)"
 
 # Compile main.c
 $(BUILD_DIR)/main.o: $(SRC_DIR)/main.c $(HEADERS_DIR)/basic_sched.h $(HEADERS_DIR)/config_parser.h $(HEADERS_DIR)/ncurses_display.h
@@ -65,25 +71,12 @@ $(BUILD_DIR)/main.o: $(SRC_DIR)/main.c $(HEADERS_DIR)/basic_sched.h $(HEADERS_DI
 $(BUILD_DIR)/basic.o: $(HEADERS_DIR)/basic.c $(HEADERS_DIR)/basic_sched.h
 	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/basic.c -o $(BUILD_DIR)/basic.o
 
-# Compile fifo.c
-$(BUILD_DIR)/fifo.o: $(HEADERS_DIR)/fifo.c $(HEADERS_DIR)/basic_sched.h
-	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/fifo.c -o $(BUILD_DIR)/fifo.o
-
-# Compile round_robin.c
-$(BUILD_DIR)/round_robin.o: $(HEADERS_DIR)/round_robin.c $(HEADERS_DIR)/basic_sched.h
-	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/round_robin.c -o $(BUILD_DIR)/round_robin.o
-
-# Compile priority_preemptive.c
-$(BUILD_DIR)/priority_preemptive.o: $(HEADERS_DIR)/priority_preemptive.c $(HEADERS_DIR)/basic_sched.h
-	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/priority_preemptive.c -o $(BUILD_DIR)/priority_preemptive.o
-
-# Compile multilevel.c
-$(BUILD_DIR)/multilevel.o: $(HEADERS_DIR)/multilevel.c $(HEADERS_DIR)/basic_sched.h
-	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/multilevel.c -o $(BUILD_DIR)/multilevel.o
-
-# Compile multilevel_aging.c
-$(BUILD_DIR)/multilevel_aging.o: $(HEADERS_DIR)/multilevel_aging.c $(HEADERS_DIR)/basic_sched.h
-	$(CC) $(CFLAGS) -c $(HEADERS_DIR)/multilevel_aging.c -o $(BUILD_DIR)/multilevel_aging.o
+# Generic rule for compiling algorithm files (only if they exist)
+$(BUILD_DIR)/%.o: $(HEADERS_DIR)/%.c $(HEADERS_DIR)/basic_sched.h
+	@if [ -f $(HEADERS_DIR)/$*.c ]; then \
+		echo "Compiling $*.c..."; \
+		$(CC) $(CFLAGS) -c $(HEADERS_DIR)/$*.c -o $(BUILD_DIR)/$*.o; \
+	fi
 
 # Compile config_parser.c
 $(BUILD_DIR)/config_parser.o: $(HEADERS_DIR)/config_parser.c $(HEADERS_DIR)/config_parser.h $(HEADERS_DIR)/basic_sched.h

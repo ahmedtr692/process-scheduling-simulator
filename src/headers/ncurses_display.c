@@ -32,10 +32,26 @@ void cleanup_ncurses_display() {
     endwin();
 }
 
+available_algorithms_t check_available_algorithms() {
+    available_algorithms_t avail;
+    
+    // Check if each scheduling function is available (non-NULL weak symbol)
+    avail.fifo_available = (fifo_sched != NULL);
+    avail.round_robin_available = (round_robin_sched != NULL);
+    avail.priority_available = (priority_sched != NULL);
+    avail.multilevel_available = (multilevel_rr_sched != NULL);
+    avail.multilevel_aging_available = (multilevel_rr_aging_sched != NULL);
+    
+    return avail;
+}
+
 int show_menu() {
     clear();
     int width;
     getmaxyx(stdscr, width, width);  // Just get width, ignore height
+    
+    // Check which algorithms are available
+    available_algorithms_t avail = check_available_algorithms();
     
     // Title
     attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
@@ -49,15 +65,53 @@ int show_menu() {
     mvprintw(7, (width - 50) / 2, "Select a scheduling policy:");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
-    mvprintw(9, (width - 50) / 2,  "  1. FIFO (First In First Out)");
-    mvprintw(10, (width - 50) / 2, "  2. Round-Robin");
-    mvprintw(11, (width - 50) / 2, "  3. Priority Preemptive");
-    mvprintw(12, (width - 50) / 2, "  4. Multi-level Queue (Static Priority)");
-    mvprintw(13, (width - 50) / 2, "  5. Multi-level Queue with Aging");
-    mvprintw(14, (width - 50) / 2, "  0. Exit");
+    int line = 9;
+    
+    // Only show available algorithms
+    if (avail.fifo_available) {
+        mvprintw(line++, (width - 50) / 2,  "  1. FIFO (First In First Out)");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2,  "  1. FIFO (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.round_robin_available) {
+        mvprintw(line++, (width - 50) / 2, "  2. Round-Robin");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  2. Round-Robin (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.priority_available) {
+        mvprintw(line++, (width - 50) / 2, "  3. Priority Preemptive");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  3. Priority Preemptive (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.multilevel_available) {
+        mvprintw(line++, (width - 50) / 2, "  4. Multi-level Queue (Static Priority)");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  4. Multi-level Queue (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    if (avail.multilevel_aging_available) {
+        mvprintw(line++, (width - 50) / 2, "  5. Multi-level Queue with Aging");
+    } else {
+        attron(COLOR_PAIR(COLOR_WAIT));
+        mvprintw(line++, (width - 50) / 2, "  5. Multi-level Queue with Aging (Not Available)");
+        attroff(COLOR_PAIR(COLOR_WAIT));
+    }
+    
+    mvprintw(line++, (width - 50) / 2, "  0. Exit");
     
     attron(COLOR_PAIR(COLOR_HEADER));
-    mvprintw(16, (width - 50) / 2, "Enter your choice: ");
+    mvprintw(line + 1, (width - 50) / 2, "Enter your choice: ");
     attroff(COLOR_PAIR(COLOR_HEADER));
     
     refresh();
@@ -157,25 +211,29 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     mvprintw(0, (width - 40) / 2, "        GANTT CHART - SCHEDULING        ");
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
-    // Legend
+    // Legend with colored blocks (using ACS characters for compatibility)
     attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     mvprintw(2, 2, "Legend: ");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    printw("C=CALC  ");
+    addch(ACS_CKBOARD);
+    printw("=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    printw("I=I/O  ");
+    addch(ACS_CKBOARD);
+    printw("=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    printw("W=Wait  ");
+    addch(ACS_CKBOARD);
+    printw("=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
     attron(COLOR_PAIR(COLOR_TERM));
-    printw("T=Term");
+    addch(ACS_CKBOARD);
+    printw("=Term");
     attroff(COLOR_PAIR(COLOR_TERM));
     
     // Scrolling variables
@@ -192,15 +250,15 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
             clrtoeol();
         }
         
-        // Display time header
+        // Display time header (with separators)
         mvprintw(4, 2, "Process        |");
         for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
-            printw("%d", t % 10);
+            printw("%d|", t % 10);
         }
         
         mvprintw(5, 2, "---------------|");
         for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
-            printw("-");
+            printw("--");
         }
         
         // Display each process timeline
@@ -228,7 +286,7 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 }
             }
             
-            // Display visible portion with colors
+            // Display visible portion with colored blocks (using ACS characters)
             for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
                 char ch = timeline[t];
                 int color = COLOR_WAIT;
@@ -243,10 +301,17 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 
                 if (ch != ' ') {
                     attron(COLOR_PAIR(color));
-                    addch(ch);
+                    // Map characters to ncurses ACS block characters
+                    if (ch == 'C' || ch == 'I') {
+                        addch(ACS_CKBOARD);  // Checker board for CALC/I/O
+                    } else if (ch == 'W' || ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Wait/Terminated
+                    }
                     attroff(COLOR_PAIR(color));
+                    addch('|'); // Separator after each tick
                 } else {
                     addch(' ');
+                    addch('|'); // Separator for empty ticks
                 }
             }
         }
@@ -283,6 +348,152 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 break;
         }
     }
+}
+
+void display_realtime_gantt(process_descriptor_t* descriptor, int size, int delay_ms) {
+    if (size == 0) return;
+    
+    clear();
+    
+    // Find unique processes and max time
+    char proc_names[100][64];
+    int proc_count = 0;
+    int max_time = 0;
+    
+    for (int i = 0; i < size; i++) {
+        int found = 0;
+        for (int j = 0; j < proc_count; j++) {
+            if (strcmp(proc_names[j], descriptor[i].process_name) == 0) {
+                found = 1;
+                break;
+            }
+        }
+        if (!found) {
+            strncpy(proc_names[proc_count], descriptor[i].process_name, 63);
+            proc_names[proc_count][63] = '\0';
+            proc_count++;
+        }
+        if (descriptor[i].date > max_time) max_time = descriptor[i].date;
+    }
+    
+    int height, width;
+    getmaxyx(stdscr, height, width);
+    
+    // Title
+    attron(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    mvprintw(0, (width - 40) / 2, "   REAL-TIME GANTT CHART SIMULATION     ");
+    attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
+    
+    // Legend (using ACS characters for compatibility)
+    attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
+    mvprintw(2, 2, "Legend: ");
+    attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
+    
+    attron(COLOR_PAIR(COLOR_CALC));
+    addch(ACS_CKBOARD);
+    printw("=CALC  ");
+    attroff(COLOR_PAIR(COLOR_CALC));
+    
+    attron(COLOR_PAIR(COLOR_IO));
+    addch(ACS_CKBOARD);
+    printw("=I/O  ");
+    attroff(COLOR_PAIR(COLOR_IO));
+    
+    attron(COLOR_PAIR(COLOR_WAIT));
+    addch(ACS_CKBOARD);
+    printw("=Wait  ");
+    attroff(COLOR_PAIR(COLOR_WAIT));
+    
+    attron(COLOR_PAIR(COLOR_TERM));
+    addch(ACS_CKBOARD);
+    printw("=Term");
+    attroff(COLOR_PAIR(COLOR_TERM));
+    
+    // Display process headers
+    mvprintw(4, 2, "Process        |");
+    mvprintw(5, 2, "---------------|");
+    
+    for (int p = 0; p < proc_count && p < height - 10; p++) {
+        mvprintw(6 + p * 2, 2, "%-14s |", proc_names[p]);
+    }
+    
+    refresh();
+    
+    // Animate tick by tick
+    timeout(delay_ms);
+    for (int t = 0; t <= max_time; t++) {
+        // Update time header (with separator)
+        mvprintw(4, 17 + (t * 2), "%d|", t % 10);
+        
+        // Update each process for this time tick
+        for (int p = 0; p < proc_count && p < height - 10; p++) {
+            // Find descriptor for this process at this time
+            char ch = ' ';
+            int color = COLOR_WAIT;
+            
+            for (int i = 0; i < size; i++) {
+                if (strcmp(descriptor[i].process_name, proc_names[p]) == 0 && 
+                    descriptor[i].date == t) {
+                    color = get_color_for_operation(descriptor[i].operation, descriptor[i].state);
+                    
+                    if (descriptor[i].state == running_p) {
+                        ch = (descriptor[i].operation == calc_p) ? 'C' : 'I';
+                    } else if (descriptor[i].state == waiting_p) {
+                        ch = 'W';
+                    } else if (descriptor[i].state == terminated_p) {
+                        ch = 'T';
+                    }
+                    break;
+                }
+            }
+            
+            // Display the block at the correct position (2 chars per tick: block + separator)
+            int display_col = 17 + (t * 2);
+            if (display_col < width - 2) {
+                move(6 + p * 2, display_col);
+                if (ch != ' ') {
+                    attron(COLOR_PAIR(color));
+                    // Map to ncurses ACS block characters
+                    if (ch == 'C' || ch == 'I') {
+                        addch(ACS_CKBOARD);  // Checker board for CALC/I/O
+                    } else if (ch == 'W' || ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Wait/Terminated
+                    }
+                    attroff(COLOR_PAIR(color));
+                    addch('|'); // Separator after each tick
+                } else {
+                    addch(' ');
+                    addch('|'); // Separator for empty ticks
+                }
+            }
+        }
+        
+        // Status bar
+        attron(COLOR_PAIR(COLOR_HEADER));
+        mvprintw(height - 2, 0, " Time: %d/%d | Press 'q' to skip animation, any other key to continue... ", 
+                 t, max_time);
+        attroff(COLOR_PAIR(COLOR_HEADER));
+        
+        refresh();
+        
+        // Check for user input
+        int ch = getch();
+        if (ch == 'q' || ch == 'Q') {
+            // Skip remaining animation
+            timeout(-1);
+            break;
+        }
+    }
+    
+    timeout(-1);
+    
+    // Final message
+    attron(COLOR_PAIR(COLOR_HEADER));
+    mvprintw(height - 2, 0, " Animation complete. Press any key to continue... ");
+    clrtoeol();
+    attroff(COLOR_PAIR(COLOR_HEADER));
+    refresh();
+    getch();
 }
 
 void display_ready_queue(process_queue* queue __attribute__((unused)), int current_time __attribute__((unused))) {

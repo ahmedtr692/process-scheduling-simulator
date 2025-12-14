@@ -3,15 +3,6 @@
 #include "headers/ncurses_display.h"
 #include <string.h>
 
-//<<<<<<< HEAD
-int main(int argv, char** argc){
-  File* file ;
-  char* path ;
-  path = argc[1];
-  file = fopen(path, 'r');
-  if(file == NULL) return -1 ;
-  return 0 ;
-//=======
 int main(int argc, char** argv) {
     if (argc < 2) {
         fprintf(stderr, "Usage: %s <config_file>\n", argv[0]);
@@ -47,6 +38,42 @@ int main(int argc, char** argv) {
 
         if (choice == 0) {
             running = 0;
+            continue;
+        }
+
+        // Check if selected algorithm is available
+        available_algorithms_t avail = check_available_algorithms();
+        int algorithm_unavailable = 0;
+        
+        switch (choice) {
+            case 1:
+                if (!avail.fifo_available) algorithm_unavailable = 1;
+                break;
+            case 2:
+                if (!avail.round_robin_available) algorithm_unavailable = 1;
+                break;
+            case 3:
+                if (!avail.priority_available) algorithm_unavailable = 1;
+                break;
+            case 4:
+                if (!avail.multilevel_available) algorithm_unavailable = 1;
+                break;
+            case 5:
+                if (!avail.multilevel_aging_available) algorithm_unavailable = 1;
+                break;
+            default:
+                algorithm_unavailable = 1;
+                break;
+        }
+        
+        if (algorithm_unavailable) {
+            clear();
+            attron(COLOR_PAIR(3) | A_BOLD);  // Yellow color
+            mvprintw(10, 10, "Selected algorithm is not available.");
+            mvprintw(11, 10, "Press any key to continue...");
+            attroff(COLOR_PAIR(3) | A_BOLD);
+            refresh();
+            getch();
             continue;
         }
 
@@ -101,7 +128,13 @@ int main(int argc, char** argv) {
         }
 
         if (descriptor != NULL) {
+            // Show real-time tick-by-tick animation (200ms per tick)
+            display_realtime_gantt(descriptor, desc_size, 200);
+            
+            // Show scrollable Gantt chart
             display_gantt_chart(descriptor, desc_size);
+            
+            // Show simulation results and statistics
             display_simulation_results(descriptor, desc_size);
             display_statistics(descriptor, desc_size);
             free(descriptor);
@@ -126,5 +159,4 @@ int main(int argc, char** argv) {
     }
 
     return 0;
->>>>>>> origin/copilot/create-multitasking-scheduler
 }

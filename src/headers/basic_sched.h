@@ -11,23 +11,21 @@ typedef enum process_state {
   blocked_p
 } process_state;
 
-/* Change here: make operation_t the enum, with calc/io/none */
-typedef enum operation_t {
-  calc,
-  io,
+typedef enum {
+  calc_p,
+  IO_p,
   none
-} operation_t;
+} process_operation_t;
 
-/* Each operation in a process */
-typedef struct {
-  operation_t operation_p;
+typedef struct operation_t {
+  process_operation_t operation_p;
   int duration_op;
-} operation_desc_t;
+} operation_t;
 
 typedef struct process_t {
   char *process_name;
   int begining_date;
-  operation_desc_t *descriptor_p;  // updated type name
+  operation_t *descriptor_p;
   int arrival_time_p;
   int operations_count;
   int priority_p;
@@ -45,20 +43,27 @@ typedef struct process_queue {
 } process_queue;
 
 typedef struct process_descriptor_t {
-  char* process_name;
-  int date;
+  char* process_name ;
+  int date ;
   process_state state;
-  operation_t operation;        // now uses operation_t (calc/io/none)
-} process_descriptor_t;
+  process_operation_t operation;
+}process_descriptor_t;
 
 void add_tail(process_queue* p, process_t process);
+
 void append_descriptor(process_descriptor_t** descriptor ,process_descriptor_t unit_descriptor, int *size);
+
 void remove_head(process_queue *p);
 
-void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
-void round_robin_sched(process_queue* p, process_descriptor_t** descriptor, int *size, int quantum);
-void priority_sched(process_queue* p,  process_descriptor_t** descriptor, int *size);
-void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
-void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descriptor, int *size);
+// Function pointer types for scheduling algorithms
+typedef void (*sched_func_t)(process_queue*, process_descriptor_t**, int*);
+typedef void (*sched_func_quantum_t)(process_queue*, process_descriptor_t**, int*, int);
 
-#endif
+// Weak symbol declarations - these allow compilation even if functions are not defined
+void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size) __attribute__((weak));
+void round_robin_sched(process_queue* p, process_descriptor_t** descriptor, int *size, int quantum) __attribute__((weak));
+void priority_sched(process_queue* p,  process_descriptor_t** descriptor, int *size) __attribute__((weak));
+void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, int *size) __attribute__((weak));
+void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descriptor, int *size) __attribute__((weak));
+
+#endif 

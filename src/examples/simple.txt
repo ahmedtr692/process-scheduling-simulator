@@ -1,6 +1,0 @@
-# Simple test with 3 processes
-# All arrive at time 0 with different priorities
-
-ProcessA 0 10 calc:5
-ProcessB 0 5 calc:8
-ProcessC 0 15 calc:3
