@@ -250,15 +250,15 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
             clrtoeol();
         }
         
-        // Display time header
+        // Display time header (with separators)
         mvprintw(4, 2, "Process        |");
         for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
-            printw("%d", t % 10);
+            printw("%d|", t % 10);
         }
         
         mvprintw(5, 2, "---------------|");
         for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
-            printw("-");
+            printw("--");
         }
         
         // Display each process timeline
@@ -303,13 +303,15 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                     attron(COLOR_PAIR(color));
                     // Map characters to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
-                        addch(ACS_CKBOARD);  // Solid block for CALC/I/O
+                        addch(ACS_CKBOARD);  // Checker board for CALC/I/O
                     } else if (ch == 'W' || ch == 'T') {
                         addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
                     attroff(COLOR_PAIR(color));
+                    addch('|'); // Separator after each tick
                 } else {
                     addch(' ');
+                    addch('|'); // Separator for empty ticks
                 }
             }
         }
@@ -420,8 +422,8 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
     // Animate tick by tick
     timeout(delay_ms);
     for (int t = 0; t <= max_time; t++) {
-        // Update time header
-        mvprintw(4, 17, "%d", t);
+        // Update time header (with separator)
+        mvprintw(4, 17 + (t * 2), "%d|", t % 10);
         
         // Update each process for this time tick
         for (int p = 0; p < proc_count && p < height - 10; p++) {
@@ -445,21 +447,23 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
                 }
             }
             
-            // Display the block at the correct position
-            int display_col = 17 + t;
-            if (display_col < width - 1) {
+            // Display the block at the correct position (2 chars per tick: block + separator)
+            int display_col = 17 + (t * 2);
+            if (display_col < width - 2) {
                 move(6 + p * 2, display_col);
                 if (ch != ' ') {
                     attron(COLOR_PAIR(color));
                     // Map to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
-                        addch(ACS_CKBOARD);  // Solid block for CALC/I/O
+                        addch(ACS_CKBOARD);  // Checker board for CALC/I/O
                     } else if (ch == 'W' || ch == 'T') {
                         addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
                     attroff(COLOR_PAIR(color));
+                    addch('|'); // Separator after each tick
                 } else {
                     addch(' ');
+                    addch('|'); // Separator for empty ticks
                 }
             }
         }
