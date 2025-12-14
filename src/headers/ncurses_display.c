@@ -227,7 +227,7 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    addch(ACS_BOARD);
+    addch(ACS_CKBOARD);
     printw("=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
@@ -304,10 +304,8 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                     // Map characters to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
                         addch(ACS_BLOCK);  // Solid block for CALC/I/O
-                    } else if (ch == 'W') {
-                        addch(ACS_BOARD);  // Board pattern for Wait
-                    } else if (ch == 'T') {
-                        addch(ACS_CKBOARD); // Checker board for Terminated
+                    } else if (ch == 'W' || ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
                     attroff(COLOR_PAIR(color));
                 } else {
@@ -400,7 +398,7 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    addch(ACS_BOARD);
+    addch(ACS_CKBOARD);
     printw("=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
@@ -456,10 +454,8 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
                     // Map to ncurses ACS block characters
                     if (ch == 'C' || ch == 'I') {
                         addch(ACS_BLOCK);  // Solid block for CALC/I/O
-                    } else if (ch == 'W') {
-                        addch(ACS_BOARD);  // Board pattern for Wait
-                    } else if (ch == 'T') {
-                        addch(ACS_CKBOARD); // Checker board for Terminated
+                    } else if (ch == 'W' || ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Wait/Terminated
                     }
                     attroff(COLOR_PAIR(color));
                 } else {
