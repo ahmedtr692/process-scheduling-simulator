@@ -29,14 +29,11 @@ int parse_config_file(const char* filename, process_queue* pqueue) {
         line_num++;
         char* trimmed = trim(line);
         
-        // Skip empty lines and comments
+        
         if (trimmed[0] == '\0' || trimmed[0] == '#') {
             continue;
         }
 
-        // Parse process definition
-        // Format: name arrival_time priority operation1_type:duration operation2_type:duration ...
-        // Example: P1 0 5 calc:10 io:5 calc:3
         
         char name[64];
         int arrival_time, priority;
@@ -60,7 +57,7 @@ int parse_config_file(const char* filename, process_queue* pqueue) {
         }
         priority = atoi(token);
         
-        // Parse operations
+        
         operation_t ops[MAX_OPS];
         int op_count = 0;
         
@@ -86,7 +83,7 @@ int parse_config_file(const char* filename, process_queue* pqueue) {
             continue;
         }
         
-        // Create process
+        
         process_t proc;
         proc.process_name = malloc(strlen(name) + 1);
         strcpy(proc.process_name, name);

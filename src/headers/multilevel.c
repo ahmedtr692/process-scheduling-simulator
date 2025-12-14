@@ -45,7 +45,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
         int io_pick = -1;
         int best_priority = INT_MIN;
 
-        /* --- Find highest ready priority for CPU (CALC only) --- */
+        
         for (int k = 0; k < n; k++) {
             if (!done[k] &&
                 procs[k].arrival_time_p <= current_time &&
@@ -60,11 +60,11 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             }
         }
 
-        /* --- ROUND-ROBIN among processes of SAME priority for CPU --- */
+        
         if (best_priority != INT_MIN) {
             int last = rr_index[best_priority];
 
-            /* Phase 1: search after last index */
+            
             for (int k = last + 1; k < n; k++) {
                 if (!done[k] &&
                     procs[k].priority_p == best_priority &&
@@ -79,7 +79,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
                 }
             }
 
-            /* Phase 2: wrap around */
+            
             if (cpu_pick == -1) {
                 for (int k = 0; k <= last; k++) {
                     if (!done[k] &&
@@ -101,17 +101,17 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             }
         }
 
-        /* --- Find process for I/O device --- */
+        
         for (int k = 0; k < n; k++) {
             if (!done[k] &&
                 procs[k].arrival_time_p <= current_time &&
                 io_until[k] >= 0 && io_until[k] > current_time) {
-                io_pick = k; // Continue existing I/O
+                io_pick = k; 
                 break;
             }
         }
 
-        /* If no ongoing I/O, assign to highest priority process needing it */
+        
         if (io_pick == -1) {
             int best_io_priority = INT_MIN;
             for (int k = 0; k < n; k++) {
@@ -129,13 +129,13 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
                 }
             }
             
-            /* Start I/O if found */
+            
             if (io_pick >= 0) {
                 io_until[io_pick] = current_time + op_left[io_pick];
             }
         }
 
-        /* Execute CPU operation */
+        
         if (cpu_pick >= 0) {
             process_descriptor_t r;
             r.process_name = procs[cpu_pick].process_name;
@@ -154,7 +154,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             }
         }
 
-        /* Execute I/O operation */
+        
         if (io_pick >= 0) {
             process_descriptor_t r;
             r.process_name = procs[io_pick].process_name;
@@ -163,7 +163,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             r.operation = IO_p;
             append_descriptor(descriptor, r, size);
 
-            /* Check if I/O completed */
+            
             if (io_until[io_pick] <= current_time + 1) {
                 op_idx[io_pick]++;
                 io_until[io_pick] = -1;
@@ -173,7 +173,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             }
         }
 
-        /* LOG WAITING */
+        
         for (int k = 0; k < n; k++) {
             if (k == cpu_pick || k == io_pick) continue;
             if (!done[k] && procs[k].arrival_time_p <= current_time)
@@ -187,7 +187,7 @@ void multilevel_rr_sched(process_queue* p, process_descriptor_t** descriptor, in
             }
         }
 
-        /* Check for terminated processes */
+        
         for (int k = 0; k < n; k++) {
             if (!done[k] &&
                 procs[k].arrival_time_p <= current_time &&

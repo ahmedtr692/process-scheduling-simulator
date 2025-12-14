@@ -55,11 +55,11 @@ void append_descriptor(process_descriptor_t** descriptor ,process_descriptor_t u
 
 void remove_head(process_queue *p);
 
-// Function pointer types for scheduling algorithms
+
 typedef void (*sched_func_t)(process_queue*, process_descriptor_t**, int*);
 typedef void (*sched_func_quantum_t)(process_queue*, process_descriptor_t**, int*, int);
 
-// Weak symbol declarations - these allow compilation even if functions are not defined
+
 void fifo_sched(process_queue* p, process_descriptor_t** descriptor, int *size) __attribute__((weak));
 void round_robin_sched(process_queue* p, process_descriptor_t** descriptor, int *size, int quantum) __attribute__((weak));
 void priority_sched(process_queue* p,  process_descriptor_t** descriptor, int *size) __attribute__((weak));
