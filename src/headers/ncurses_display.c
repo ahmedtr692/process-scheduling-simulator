@@ -211,25 +211,29 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
     mvprintw(0, (width - 40) / 2, "        GANTT CHART - SCHEDULING        ");
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
-    // Legend with colored blocks
+    // Legend with colored blocks (using ACS characters for compatibility)
     attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     mvprintw(2, 2, "Legend: ");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    printw("█=CALC  ");
+    addch(ACS_BLOCK);
+    printw("=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    printw("█=I/O  ");
+    addch(ACS_BLOCK);
+    printw("=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    printw("░=Wait  ");
+    addch(ACS_BOARD);
+    printw("=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
     attron(COLOR_PAIR(COLOR_TERM));
-    printw("▓=Term");
+    addch(ACS_CKBOARD);
+    printw("=Term");
     attroff(COLOR_PAIR(COLOR_TERM));
     
     // Scrolling variables
@@ -282,11 +286,10 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 }
             }
             
-            // Display visible portion with colored blocks
+            // Display visible portion with colored blocks (using ACS characters)
             for (int t = scroll_x; t < scroll_x + view_width && t <= max_time; t++) {
                 char ch = timeline[t];
                 int color = COLOR_WAIT;
-                const char* block = " ";
                 
                 // Find the descriptor for this time to get proper color
                 for (int i = 0; i < size; i++) {
@@ -297,14 +300,15 @@ void display_gantt_chart(process_descriptor_t* descriptor, int size) {
                 }
                 
                 if (ch != ' ') {
-                    // Map characters to Unicode block characters
-                    if (ch == 'C') block = "█";      // Full block for CALC
-                    else if (ch == 'I') block = "█"; // Full block for I/O
-                    else if (ch == 'W') block = "░"; // Light shade for Wait
-                    else if (ch == 'T') block = "▓"; // Medium shade for Terminated
-                    
                     attron(COLOR_PAIR(color));
-                    printw("%s", block);
+                    // Map characters to ncurses ACS block characters
+                    if (ch == 'C' || ch == 'I') {
+                        addch(ACS_BLOCK);  // Solid block for CALC/I/O
+                    } else if (ch == 'W') {
+                        addch(ACS_BOARD);  // Board pattern for Wait
+                    } else if (ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Terminated
+                    }
                     attroff(COLOR_PAIR(color));
                 } else {
                     addch(' ');
@@ -380,25 +384,29 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
     mvprintw(0, (width - 40) / 2, "   REAL-TIME GANTT CHART SIMULATION     ");
     attroff(COLOR_PAIR(COLOR_TITLE) | A_BOLD);
     
-    // Legend
+    // Legend (using ACS characters for compatibility)
     attron(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     mvprintw(2, 2, "Legend: ");
     attroff(COLOR_PAIR(COLOR_HEADER) | A_BOLD);
     
     attron(COLOR_PAIR(COLOR_CALC));
-    printw("█=CALC  ");
+    addch(ACS_BLOCK);
+    printw("=CALC  ");
     attroff(COLOR_PAIR(COLOR_CALC));
     
     attron(COLOR_PAIR(COLOR_IO));
-    printw("█=I/O  ");
+    addch(ACS_BLOCK);
+    printw("=I/O  ");
     attroff(COLOR_PAIR(COLOR_IO));
     
     attron(COLOR_PAIR(COLOR_WAIT));
-    printw("░=Wait  ");
+    addch(ACS_BOARD);
+    printw("=Wait  ");
     attroff(COLOR_PAIR(COLOR_WAIT));
     
     attron(COLOR_PAIR(COLOR_TERM));
-    printw("▓=Term");
+    addch(ACS_CKBOARD);
+    printw("=Term");
     attroff(COLOR_PAIR(COLOR_TERM));
     
     // Display process headers
@@ -422,7 +430,6 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
             // Find descriptor for this process at this time
             char ch = ' ';
             int color = COLOR_WAIT;
-            const char* block = " ";
             
             for (int i = 0; i < size; i++) {
                 if (strcmp(descriptor[i].process_name, proc_names[p]) == 0 && 
@@ -440,18 +447,20 @@ void display_realtime_gantt(process_descriptor_t* descriptor, int size, int dela
                 }
             }
             
-            // Map to block characters
-            if (ch == 'C' || ch == 'I') block = "█";
-            else if (ch == 'W') block = "░";
-            else if (ch == 'T') block = "▓";
-            
             // Display the block at the correct position
             int display_col = 17 + t;
             if (display_col < width - 1) {
                 move(6 + p * 2, display_col);
                 if (ch != ' ') {
                     attron(COLOR_PAIR(color));
-                    printw("%s", block);
+                    // Map to ncurses ACS block characters
+                    if (ch == 'C' || ch == 'I') {
+                        addch(ACS_BLOCK);  // Solid block for CALC/I/O
+                    } else if (ch == 'W') {
+                        addch(ACS_BOARD);  // Board pattern for Wait
+                    } else if (ch == 'T') {
+                        addch(ACS_CKBOARD); // Checker board for Terminated
+                    }
                     attroff(COLOR_PAIR(color));
                 } else {
                     addch(' ');
