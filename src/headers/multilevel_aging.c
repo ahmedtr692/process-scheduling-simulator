@@ -2,7 +2,10 @@
 #include <stdlib.h>
 #include <limits.h>
 
-#define AGING_THRESHOLD 5   // Number of ticks before priority increases
+#define AGING_THRESHOLD 5   // Number of ticks before priority promotion
+#define HIGH_PRIORITY 10    // Maximum priority (HIGH level)
+#define MEDIUM_PRIORITY 5   // Medium level
+#define LOW_PRIORITY 1      // Minimum priority (LOW level)
 
 void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descriptor, int *size) {
     if (!p || p->size == 0) return;
@@ -36,8 +39,8 @@ void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descript
     int current_time = 0;
     int max_time = 10000;
 
-    /* dynamic Round-Robin table (resizable) */
-    int rr_cap = 32;
+    /* Round-Robin index table for each priority level */
+    int rr_cap = HIGH_PRIORITY + 5;  // Safe capacity based on max priority
     int *rr_index = malloc(rr_cap * sizeof(int));
     for (int k = 0; k < rr_cap; k++) rr_index[k] = -1;
 
@@ -165,16 +168,21 @@ void multilevel_rr_aging_sched(process_queue* p, process_descriptor_t** descript
             wait_time[k]++;
 
             if (wait_time[k] >= AGING_THRESHOLD) {
-                procs[k].priority_p++;   // age
-                wait_time[k] = 0;
-
-                /* expand rr_index if needed */
-                if (procs[k].priority_p >= rr_cap) {
-                    rr_cap *= 2;
-                    rr_index = realloc(rr_index, rr_cap * sizeof(int));
-                    for (int t = procs[k].priority_p; t < rr_cap; t++)
-                        rr_index[t] = -1;
+                // Promote to next priority level (with cap at HIGH_PRIORITY)
+                if (procs[k].priority_p < HIGH_PRIORITY) {
+                    int old_priority = procs[k].priority_p;
+                    
+                    // Determine promotion based on current level
+                    if (procs[k].priority_p < MEDIUM_PRIORITY) {
+                        // LOW level (1-4) -> promote to MEDIUM (5)
+                        procs[k].priority_p = MEDIUM_PRIORITY;
+                    } else if (procs[k].priority_p < HIGH_PRIORITY) {
+                        // MEDIUM level (5-9) -> promote to HIGH (10)
+                        procs[k].priority_p = HIGH_PRIORITY;
+                    }
+                    // Already at HIGH_PRIORITY - don't promote further
                 }
+                wait_time[k] = 0;
             }
         }
 
